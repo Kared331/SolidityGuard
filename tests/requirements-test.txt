@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]
+asyncpg
+alembic
+celery[redis]
+redis
+python-multipart
+psycopg2-binary
+chromadb
+httpx
+jinja2
+weasyprint
+python-docx
+pytest
+pytest-asyncio

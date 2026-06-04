@@ -1,0 +1,63 @@
+# ─── Python ──────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+.eggs/
+*.so
+
+# ─── Virtual environments ───────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ─── IDE / Editor ───────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── Environment & secrets ──────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Uploads & generated reports ────────────────────────────────
+uploads/
+reports/
+
+# ─── ChromaDB persistent data ───────────────────────────────────
+chroma_data/
+
+# ─── Docker volumes (pgdata is a named volume, not on disk) ────
+# pgdata/ is handled by Docker, no need to ignore
+
+# ─── Node.js (frontend) ────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.cache/
+
+# ─── Celery ─────────────────────────────────────────────────────
+celerybeat-schedule
+celerybeat.pid
+
+# ─── Logs ───────────────────────────────────────────────────────
+*.log
+
+# ─── TLS certs (if generated locally) ──────────────────────────
+certs/
+
+# ─── Foundry (if initialized in uploads) ────────────────────────
+# Foundry artifacts inside uploaded projects are ephemeral
+
+# ─── OS ─────────────────────────────────────────────────────────
+.DS_Store
+Desktop.ini

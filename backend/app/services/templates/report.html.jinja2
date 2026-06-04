@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; background: #fff; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 40px 30px; }
+        .header { border-bottom: 3px solid #1a73e8; padding-bottom: 20px; margin-bottom: 30px; }
+        .header h1 { color: #1a73e8; font-size: 28px; margin-bottom: 5px; }
+        .header .subtitle { color: #666; font-size: 14px; }
+        .summary { background: #f8f9fa; border-left: 4px solid #1a73e8; padding: 15px 20px; margin-bottom: 30px; border-radius: 0 4px 4px 0; }
+        .summary h2 { font-size: 18px; color: #1a73e8; margin-bottom: 8px; }
+        .summary p { font-size: 14px; color: #555; }
+        .section { margin-bottom: 30px; }
+        .section h2 { font-size: 20px; color: #333; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px; margin-bottom: 15px; }
+        .findings-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .findings-table th { background: #1a73e8; color: #fff; padding: 10px 12px; text-align: left; font-weight: 600; }
+        .findings-table td { padding: 10px 12px; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
+        .findings-table tr:nth-child(even) { background: #f8f9fa; }
+        .severity-high { background-color: #dc3545; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: 600; font-size: 11px; text-transform: uppercase; }
+        .severity-medium { background-color: #fd7e14; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: 600; font-size: 11px; text-transform: uppercase; }
+        .severity-low { background-color: #0d6efd; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: 600; font-size: 11px; text-transform: uppercase; }
+        .severity-informational { background-color: #6c757d; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: 600; font-size: 11px; text-transform: uppercase; }
+        .severity-unknown { background-color: #6c757d; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: 600; font-size: 11px; text-transform: uppercase; }
+        .no-data { color: #999; font-style: italic; text-align: center; padding: 20px; }
+        .footer { margin-top: 40px; padding-top: 15px; border-top: 1px solid #e0e0e0; text-align: center; color: #999; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ title }}</h1>
+            <div class="subtitle">Generated on {{ generated_date }}</div>
+        </div>
+
+        <div class="summary">
+            <h2>Executive Summary</h2>
+            <p>
+                Total findings: <strong>{{ total_findings }}</strong>
+                (Slither: {{ slither_findings|length }},
+                 Fuzzing: {{ fuzzing_findings|length }},
+                 LLM: {{ llm_findings|length }})
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>Slither Static Analysis Findings</h2>
+            {% if slither_findings %}
+            <table class="findings-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Severity</th>
+                        <th>Code Location</th>
+                        <th>Fix Suggestion</th>
+                        <th>Gas Optimization</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for finding in slither_findings %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ finding.check_name }}</td>
+                        <td>{{ finding.description }}</td>
+                        <td><span class="severity-{{ finding.impact|lower }}">{{ finding.impact }}</span></td>
+                        <td>{{ finding.code_location }}</td>
+                        <td>{{ finding.fix_suggestion }}</td>
+                        <td>{{ finding.gas_optimization }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-data">No Slither findings detected.</div>
+            {% endif %}
+        </div>
+
+        <div class="section">
+            <h2>Fuzzing Findings</h2>
+            {% if fuzzing_findings %}
+            <table class="findings-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Severity</th>
+                        <th>Code Location</th>
+                        <th>Fix Suggestion</th>
+                        <th>Gas Optimization</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for finding in fuzzing_findings %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ finding.title }}</td>
+                        <td>{{ finding.description }}</td>
+                        <td><span class="severity-{{ finding.severity|lower }}">{{ finding.severity }}</span></td>
+                        <td>{{ finding.code_location }}</td>
+                        <td>{{ finding.fix_suggestion }}</td>
+                        <td>{{ finding.gas_optimization }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-data">No fuzzing failures detected.</div>
+            {% endif %}
+        </div>
+
+        <div class="section">
+            <h2>LLM Audit Findings</h2>
+            {% if llm_findings %}
+            <table class="findings-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Severity</th>
+                        <th>Code Location</th>
+                        <th>Fix Suggestion</th>
+                        <th>Gas Optimization</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for finding in llm_findings %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ finding.contract_name }}{% if finding.function_name %}::{{ finding.function_name }}{% endif %}</td>
+                        <td>{{ finding.vulnerability_description }}</td>
+                        <td><span class="severity-{{ finding.severity|lower }}">{{ finding.severity }}</span></td>
+                        <td>{{ finding.contract_name }}{% if finding.function_name %}::{{ finding.function_name }}{% endif %}</td>
+                        <td>{{ finding.suggested_fix }}</td>
+                        <td>{{ finding.gas_optimization }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-data">No LLM audit findings detected.</div>
+            {% endif %}
+        </div>
+
+        <div class="footer">
+            SolidiGuard Audit Report &mdash; Project {{ project_id }}
+        </div>
+    </div>
+</body>
+</html>
