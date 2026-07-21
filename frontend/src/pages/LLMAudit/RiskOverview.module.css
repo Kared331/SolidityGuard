@@ -1,0 +1,50 @@
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+}
+
+.barLabel {
+  width: 40px;
+  flex-shrink: 0;
+  font-size: var(--ds-font-size-sm);
+  color: var(--ds-color-text-secondary);
+  text-align: right;
+}
+
+.barTrack {
+  flex: 1;
+  height: 28px;
+  background-color: var(--ds-color-neutral-100);
+  border-radius: var(--ds-radius-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: var(--ds-radius-sm);
+  transition: width var(--ds-transition-slow);
+  min-width: 0;
+}
+
+.barFillEmpty {
+  background-color: var(--ds-color-neutral-100);
+}
+
+.barCount {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--ds-font-size-sm);
+  font-weight: var(--ds-font-weight-semibold);
+  font-family: var(--ds-font-family-metric);
+  line-height: 1;
+}

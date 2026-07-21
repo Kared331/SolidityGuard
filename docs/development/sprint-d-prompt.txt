@@ -1,0 +1,58 @@
+You are working on the SolidGuard project at D:\MetaGPT_Project\SolidGuard.
+
+Execute Sprint D: Testing & Documentation. Create the following test files.
+
+## Task 1: Unit Tests for Services
+Create file: `tests/test_services.py`
+
+Write pytest unit tests for:
+- `backend/app/services/project_service.py` — test `create_project_with_files` with mock UploadFile, test `get_project_files`, test `get_project_or_404`
+- `backend/app/services/detection_service.py` — test `mark_false_positive` with mock Detection and AnalysisResult
+- `backend/app/services/analysis_service.py` — test `list_analyses_filtered` filters FP correctly
+
+Use `pytest`, `unittest.mock`, `pytest-asyncio`. Mock database sessions and external dependencies.
+
+## Task 2: Unit Tests for Engines
+Create file: `tests/test_engines.py`
+
+Write pytest unit tests for:
+- `backend/app/services/engine/upload.py` — test `_is_safe_path` with safe/unsafe paths, test `_scan_sol_files`, test Zip Slip prevention (create a malicious zip in a tmp dir and verify extraction blocks it)
+- `backend/app/services/engine/llm_audit.py` — test `_parse_llm_json` with: valid JSON, markdown-wrapped JSON, bare regex fallback, invalid text, empty string
+- `backend/app/services/engine/report.py` — test `ReportEngine.execute` mocks
+
+## Task 3: Security Tests
+Create file: `tests/test_security.py`
+
+Write pytest tests for:
+- Path traversal in report download (mock `get_report_download_info` with paths outside reports dir, expect 403)
+- Prompt injection sanitization (`_sanitize_source_code` strips injection patterns, truncates long code)
+- Zip Slip attack prevention (create zip with `../../evil.txt`, verify it's blocked)
+- FP project scoping (verify FP query filters by project_id)
+
+## Task 4: API Integration Tests
+Create file: `tests/test_api.py`
+
+Write pytest tests using FastAPI TestClient:
+- POST /api/v1/projects — test upload with valid .sol file
+- GET /api/v1/projects/{id}/files — test list files for existing/non-existing project
+- POST /api/v1/projects/{id}/analyze — test trigger analysis on ready/non-ready project
+- GET /health — test health endpoint returns 200 with checks dict
+- POST /api/v1/detections/{id}/mark-false-positive — test marking FP
+
+Use `httpx.AsyncClient` with `pytest-asyncio`. Mock database and Celery tasks.
+
+## Task 5: Update conftest.py
+File: `tests/conftest.py`
+
+Update the existing conftest to:
+- Add fixtures for mock database session
+- Add fixtures for sample project, detection, analysis result objects
+- Add fixture for TestClient
+
+## CONSTRAINTS
+- Only create/modify test files in the `tests/` directory
+- Also update `tests/conftest.py`
+- Do NOT modify any production code
+- Use pytest, pytest-asyncio, unittest.mock
+- Tests should be runnable with `pytest tests/ -v`
+- Each test file should have clear docstrings explaining what is tested

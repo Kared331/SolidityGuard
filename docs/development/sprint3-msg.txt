@@ -1,0 +1,15 @@
+Execute Sprint 3: Engine Abstraction + Pipeline + Storage Path Unification.
+
+Working directory: D:\MetaGPT_Project\SolidGuard
+
+Read the full task at .opencode_tasks/sprint3_task.md for detailed instructions.
+
+Summary of work:
+1. Create services/infra/storage.py (unify all hardcoded paths)
+2. Replace ALL hardcoded "uploads"/"reports" paths in tasks/ and services/
+3. Create services/engine/ package: base.py, upload.py, slither.py, fuzzer.py, llm_audit.py, report.py, swc_sync.py
+4. Create tasks/pipeline.py with Celery chain/group orchestration
+5. Refactor all 6 tasks to lightweight shells (call Engine + DB write + update_state)
+6. Update 4 services to use Pipeline instead of .delay()
+
+CRITICAL: Engine classes must be pure Python (no Celery). Engine does NOT write to DB. Task shell handles DB write. Do NOT modify models/ or schemas/ or dependencies.py. Preserve ALL existing logic exactly - no optimization.

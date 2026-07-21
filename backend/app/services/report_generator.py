@@ -8,8 +8,8 @@ from datetime import datetime, timezone
 from jinja2 import Environment, FileSystemLoader
 from sqlalchemy.orm import Session
 
-from app.config import DATABASE_URL
 from app.models import Detection, FalsePositiveFeedback, FuzzingResult, LLMAuditResult
+from app.services.infra.storage import get_report_dir
 from app.services.llm_client import chat_completion
 
 logger = logging.getLogger("solidiguard.services.report_generator")
@@ -19,7 +19,9 @@ def aggregate_findings(project_id: int, session: Session) -> dict:
     """Aggregate findings from Slither, Fuzzing, and LLM audit."""
     false_positive_refs = {
         row[0]
-        for row in session.query(FalsePositiveFeedback.detection_ref).all()
+        for row in session.query(FalsePositiveFeedback.detection_ref)
+        .filter(FalsePositiveFeedback.project_id == project_id)
+        .all()
     }
 
     from app.models import AnalysisResult
@@ -102,25 +104,75 @@ def aggregate_findings(project_id: int, session: Session) -> dict:
     }
 
 
-def polish_with_llm(findings: dict) -> dict:
-    """Polish findings with LLM. Returns the polished version (4.17: raw data preserved separately)."""
+_EXPECTED_KEYS = {"slither_findings", "fuzzing_findings", "llm_findings"}
+_BATCH_SIZE = 5
+
+
+def _polish_single_batch(batch_items: list, key: str) -> list:
+    """Polish a single batch of findings via LLM."""
     system_prompt = (
         "You are a professional Solidity security audit report writer. "
         "Enhance the following findings by improving descriptions, adding context, "
-        "and ensuring severity ratings are consistent. Return valid JSON in the same structure."
+        "and ensuring severity ratings are consistent. "
+        "Return a JSON array of the polished findings in the same order."
     )
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": json.dumps(findings, indent=2)},
+        {"role": "user", "content": json.dumps(batch_items, indent=2)},
     ]
-    try:
-        response_text = chat_completion(messages)
-        polished = json.loads(response_text)
-        if isinstance(polished, dict):
-            return polished
-    except (json.JSONDecodeError, Exception):
-        logger.warning("LLM polishing failed, using raw findings")
-    return findings
+    response_text, _ = chat_completion(messages)
+    polished = json.loads(response_text)
+    if not isinstance(polished, list):
+        raise ValueError(f"Expected list, got {type(polished).__name__}")
+    if len(polished) != len(batch_items):
+        logger.warning(
+            "Polished batch size mismatch for %s: expected %d, got %d; using raw",
+            key, len(batch_items), len(polished),
+        )
+        return batch_items
+    return polished
+
+
+def polish_with_llm(findings: dict) -> dict:
+    """Polish findings with LLM in batches (max 5 per batch).
+
+    Each category (slither, fuzzing, llm) is processed independently
+    in batches to keep token usage bounded.  If any batch fails, the
+    raw findings for that batch are preserved and other batches are
+    unaffected.
+    """
+    polished = {}
+
+    for key in _EXPECTED_KEYS:
+        items = findings.get(key, [])
+        if not items:
+            polished[key] = []
+            continue
+
+        batched: list = []
+        for i in range(0, len(items), _BATCH_SIZE):
+            batch = items[i : i + _BATCH_SIZE]
+            try:
+                batch_polished = _polish_single_batch(batch, key)
+                batched.extend(batch_polished)
+            except (json.JSONDecodeError, ValueError, Exception):
+                logger.warning(
+                    "LLM polishing failed for %s batch %d-%d, using raw findings",
+                    key, i, i + len(batch),
+                )
+                batched.extend(batch)
+
+        polished[key] = batched
+
+    # Validate final structure
+    for key in _EXPECTED_KEYS:
+        if not isinstance(polished.get(key), list):
+            logger.warning(
+                "LLM polishing result key '%s' is not a list, using raw findings", key
+            )
+            return findings
+
+    return polished
 
 
 def generate_html(project_id: int, title: str, findings: dict) -> str:
@@ -144,7 +196,7 @@ def generate_html(project_id: int, title: str, findings: dict) -> str:
         llm_findings=findings.get("llm_findings", []),
     )
 
-    report_dir = os.path.join("reports", str(project_id))
+    report_dir = get_report_dir(project_id)
     os.makedirs(report_dir, exist_ok=True)
     html_path = os.path.join(report_dir, "report.html")
     with open(html_path, "w", encoding="utf-8") as f:
@@ -206,7 +258,7 @@ def generate_word(findings: dict, title: str) -> str:
                     p.add_run(str(value))
 
     project_id = findings.get("_project_id", 0)
-    docx_path = os.path.join("reports", str(project_id), "report.docx")
+    docx_path = os.path.join(get_report_dir(project_id), "report.docx")
     os.makedirs(os.path.dirname(docx_path), exist_ok=True)
     doc.save(docx_path)
     return docx_path

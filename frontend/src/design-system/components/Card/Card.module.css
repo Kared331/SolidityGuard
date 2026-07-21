@@ -1,0 +1,44 @@
+.ds-card {
+  background-color: var(--ds-color-bg-container);
+  border: 1px solid var(--ds-color-border-default);
+  border-radius: var(--ds-radius-xl);
+  box-sizing: border-box;
+  transition: border-color var(--ds-transition-fast);
+}
+
+.ds-card--padding-default {
+  padding: 20px;
+}
+
+.ds-card--padding-compact {
+  padding: 12px;
+}
+
+.ds-card--hoverable:hover {
+  border-color: var(--ds-color-border-hover);
+}
+
+.ds-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.ds-card__title {
+  margin: 0;
+  font-family: var(--ds-font-family);
+  font-size: 16px;
+  font-weight: var(--ds-font-weight-semibold);
+  color: var(--ds-color-text-primary);
+}
+
+.ds-card__extra {
+  flex-shrink: 0;
+}
+
+.ds-card__body {
+  font-family: var(--ds-font-family);
+  font-size: var(--ds-font-size-base);
+  color: var(--ds-color-text-primary);
+}

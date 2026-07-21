@@ -12,3 +12,6 @@ httpx
 jinja2
 weasyprint
 python-docx
+slowapi
+tenacity
+pydantic-settings

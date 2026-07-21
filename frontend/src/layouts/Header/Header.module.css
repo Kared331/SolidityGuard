@@ -1,0 +1,61 @@
+.header {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 var(--ds-page-padding-x);
+  background: var(--ds-color-bg-container);
+  border-bottom: var(--ds-border-width) solid var(--ds-color-border-default);
+  flex-shrink: 0;
+}
+
+.brand {
+  font-family: var(--ds-font-family-heading);
+  font-size: var(--ds-font-size-md);
+  font-weight: var(--ds-font-weight-semibold);
+  color: var(--ds-color-text-primary);
+  letter-spacing: var(--ds-letter-spacing-tight);
+}
+
+.actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--ds-radius-lg);
+  font-size: var(--ds-font-size-sm);
+  font-weight: var(--ds-font-weight-medium);
+  color: var(--ds-color-text-secondary);
+  transition: background var(--ds-transition-fast), color var(--ds-transition-fast);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+.navLink:hover {
+  background: var(--ds-color-bg-hover);
+  color: var(--ds-color-text-primary);
+}
+
+.navLinkActive {
+  background: var(--ds-color-bg-selected);
+  color: var(--ds-color-brand);
+}
+
+.projectSelector {
+  margin-left: var(--ds-space-4);
+  padding: 4px 12px;
+  border: var(--ds-border-width) solid var(--ds-color-border-default);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-color-bg-container);
+  font-size: var(--ds-font-size-sm);
+  color: var(--ds-color-text-secondary);
+  cursor: pointer;
+  min-width: 160px;
+}

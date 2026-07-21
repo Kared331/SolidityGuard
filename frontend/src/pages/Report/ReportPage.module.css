@@ -1,0 +1,46 @@
+.report-page {
+  /* page content fills parent layout slot */
+}
+
+.report-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ds-space-16);
+  gap: var(--ds-space-4);
+  color: var(--ds-color-text-tertiary);
+  font-size: var(--ds-font-size-base);
+}
+
+.report-generate-section {
+  background: var(--ds-color-bg-container);
+  border: var(--ds-border-width) solid var(--ds-color-border-default);
+  border-radius: var(--ds-radius-xl);
+  padding: var(--ds-space-6);
+  margin-bottom: var(--ds-space-8);
+}
+
+.report-generate-action {
+  margin-top: var(--ds-space-4);
+}
+
+.report-generate-status {
+  margin-top: var(--ds-space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-font-size-sm);
+}
+
+.report-generate-status--error {
+  color: var(--ds-color-error);
+}
+
+.report-generate-status--success {
+  color: var(--ds-color-success);
+}
+
+.report-history-section {
+  /* section wrapper */
+}

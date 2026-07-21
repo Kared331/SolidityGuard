@@ -1,0 +1,20 @@
+Execute Sprint 1: Split backend/app/models.py into backend/app/models/ package.
+
+Working directory: D:\MetaGPT_Project\SolidGuard
+
+Read the task file at .opencode_tasks/sprint1_task.md for full instructions.
+
+Steps:
+1. Read the current backend/app/models.py to understand all 9 model classes
+2. Backup models.py to models_old.py
+3. Create backend/app/models/ directory
+4. Split into: project.py, analysis.py, audit.py, feedback.py, knowledge.py, report.py
+5. Create __init__.py that re-exports all 9 classes
+6. Verify: python -c "from app.models import Project, ProjectFile, AnalysisResult, Detection, FuzzingResult, LLMAuditResult, FalsePositiveFeedback, VulnerabilityEntry, Report; print('OK')"
+
+CRITICAL CONSTRAINTS:
+- Do NOT modify any table names, field names, or foreign keys
+- Do NOT modify any other files (API, tasks, services, etc.)
+- Do NOT add new fields or relationships
+- Do NOT delete models_old.py
+- Keep all existing import paths working via __init__.py re-exports

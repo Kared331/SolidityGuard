@@ -1,0 +1,70 @@
+.ds-input {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--ds-color-border-default);
+  border-radius: var(--ds-radius-lg);
+  background-color: var(--ds-color-bg-container);
+  box-sizing: border-box;
+  transition: border-color var(--ds-transition-fast);
+}
+
+.ds-input:hover {
+  border-color: var(--ds-color-border-hover);
+}
+
+.ds-input:focus-within {
+  border-color: var(--ds-color-border-focus);
+  outline: 2px solid var(--ds-color-border-focus);
+}
+
+.ds-input--disabled {
+  background-color: var(--ds-color-neutral-100);
+  cursor: not-allowed;
+}
+
+.ds-input__field {
+  flex: 1;
+  height: 100%;
+  padding: 0 12px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--ds-font-family);
+  font-size: var(--ds-font-size-base);
+  color: var(--ds-color-text-primary);
+  box-sizing: border-box;
+}
+
+.ds-input__field::placeholder {
+  color: var(--ds-color-text-tertiary);
+}
+
+.ds-input__field:disabled {
+  color: var(--ds-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.ds-input--has-prefix .ds-input__field {
+  padding-left: 4px;
+}
+
+.ds-input--has-suffix .ds-input__field {
+  padding-right: 4px;
+}
+
+.ds-input--search .ds-input__field {
+  padding-right: 32px;
+}
+
+.ds-input__prefix,
+.ds-input__suffix {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0 8px;
+  color: var(--ds-color-text-tertiary);
+}

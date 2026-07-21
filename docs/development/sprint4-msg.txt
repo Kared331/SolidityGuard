@@ -1,0 +1,22 @@
+Execute Sprint 4: Project State Machine + Task Progress Tracking + Frontend SSE.
+
+Working directory: D:\MetaGPT_Project\SolidGuard
+
+Read the full task at .opencode_tasks/sprint4_task.md for detailed instructions.
+
+Summary of work:
+1. Create backend/app/state/ package (project_state.py with 3 states: uploaded, processing, ready)
+2. Create Alembic migration 009_add_project_status.py (add status column to projects table)
+3. Update models/project.py (add status field)
+4. Update schemas/project.py (add status + available_actions fields)
+5. Create schemas/events.py (TaskStatusResponse)
+6. Create api/v1/tasks.py (GET /tasks/{task_id}/status endpoint)
+7. Create api/v1/events.py (GET /projects/{id}/events SSE endpoint)
+8. Update api/router.py (register new routes)
+9. Update 4 services (add status check before trigger, return task_id)
+10. Update tasks/process_upload.py (add status transitions: uploaded->processing->ready)
+11. Create frontend/src/hooks/useTaskProgress.ts (SSE + fallback)
+12. Update frontend/src/pages/ProjectDetailPage.tsx (use SSE)
+13. Update frontend/src/pages/ReportPage.tsx (use SSE)
+
+CRITICAL: Only 3 states (uploaded, processing, ready). Do NOT add analyzing/fuzzing/auditing states. Do NOT modify Sprint 1/2/3 frozen files except project.py model (add status field) and process_upload.py (add status transitions).

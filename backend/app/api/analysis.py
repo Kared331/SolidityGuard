@@ -1,56 +1,33 @@
-from fastapi import APIRouter, HTTPException
-from sqlalchemy import select
+from __future__ import annotations
 
-from app.database import async_session
-from app.models import AnalysisResult, Detection, FalsePositiveFeedback, Project
-from app.tasks.run_slither import run_slither
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.dependencies import get_db
+from app.schemas.analysis import AnalysisTriggerResponse, DetectionResponse
+from app.services.analysis_service import trigger_analysis, list_analyses_filtered
 
 router = APIRouter()
 
 
-@router.post("/projects/{project_id}/analyze")
-async def analyze_project(project_id: int):
-    async with async_session() as session:
-        project = await session.get(Project, project_id)
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
-
-    run_slither.delay(project_id)
-    return {"status": "started", "project_id": project_id}
+@router.post("/{project_id}/analyze", response_model=AnalysisTriggerResponse)
+async def analyze_project(project_id: int, db: AsyncSession = Depends(get_db)):
+    task_id = await trigger_analysis(db, project_id)
+    return AnalysisTriggerResponse(status="started", project_id=project_id, task_id=task_id)
 
 
-@router.get("/projects/{project_id}/analyses")
-async def list_analyses(project_id: int):
-    async with async_session() as session:
-        project = await session.get(Project, project_id)
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
-
-        result = await session.execute(
-            select(Detection)
-            .join(AnalysisResult, AnalysisResult.id == Detection.analysis_result_id)
-            .where(AnalysisResult.project_id == project_id)
-        )
-        all_detections = result.scalars().all()
-
-        fp_result = await session.execute(
-            select(FalsePositiveFeedback.detection_ref)
-        )
-        fp_refs = set(fp_result.scalars().all())
-
-        filtered = [
-            d for d in all_detections if d.detection_ref not in fp_refs
-        ]
-
+@router.get("/{project_id}/analyses", response_model=list[DetectionResponse])
+async def list_analyses(project_id: int, db: AsyncSession = Depends(get_db)):
+    filtered = await list_analyses_filtered(db, project_id)
     return [
-        {
-            "id": d.id,
-            "analysis_result_id": d.analysis_result_id,
-            "detection_ref": d.detection_ref,
-            "check_name": d.check_name,
-            "description": d.description,
-            "impact": d.impact,
-            "confidence": d.confidence,
-        }
+        DetectionResponse(
+            id=d.id,
+            analysis_result_id=d.analysis_result_id,
+            detection_ref=d.detection_ref,
+            check_name=d.check_name,
+            description=d.description,
+            impact=d.impact,
+            confidence=d.confidence,
+        )
         for d in filtered
     ]

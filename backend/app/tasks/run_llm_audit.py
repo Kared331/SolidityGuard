@@ -1,71 +1,31 @@
-"""LLM audit task with improved function extraction (2.10) and error handling (4.14)."""
+"""LLM audit task with improved function extraction (2.10), error handling (4.14),
+and per-row DB insertion with field truncation to prevent bulk-failure."""
 
-import json
 import logging
 import os
-import re
 
 from app.celery_app import celery
 from app.database import get_sync_session
 from app.models import LLMAuditResult, ProjectFile
-from app.services.chroma_client import get_vulnerability_collection
-from app.services.embedding import get_embedding
-from app.services.llm_client import chat_completion
+from app.services.engine.llm_audit import LLMAuditEngine
+from app.services.infra.storage import get_project_dir, get_project_file_path
 
 logger = logging.getLogger("solidiguard.tasks.run_llm_audit")
 
+DB_LIMITS = {
+    "contract_name": 200,
+    "function_name": 200,
+    "severity": 50,
+}
 
-def _extract_key_functions(source_code: str) -> list[dict]:
-    """Extract public/external functions with their bodies (2.10: robust regex).
 
-    Supports:
-    - Multi-line declarations
-    - Modifiers (public, external, view, pure, etc.)
-    - Returns clauses
-    - Function names with underscores, numbers
-    """
-    results = []
-
-    # Find all function declarations (2.10: handles modifiers, returns, multiline)
-    pattern = r"function\s+(\w+)\s*\([^)]*\)[^{]*?\{"
-    for match in re.finditer(pattern, source_code, re.DOTALL):
-        func_name = match.group(1)
-
-        # Skip constructor, receive, fallback
-        if func_name in ("constructor", "receive", "fallback"):
-            continue
-
-        # Extract function body by counting braces
-        start = match.end() - 1
-        depth = 1
-        i = start + 1
-        while i < len(source_code) and depth > 0:
-            if source_code[i] == "{":
-                depth += 1
-            elif source_code[i] == "}":
-                depth -= 1
-            i += 1
-        func_body = source_code[start:i]
-
-        # Only audit functions that interact with ETH/token
-        keywords = [
-            "transfer",
-            "call",
-            "delegatecall",
-            "selfdestruct",
-            "send",
-            "approve",
-            "transferFrom",
-            "balance",
-            "msg.value",
-            "payable",
-            "withdraw",
-            "deposit",
-        ]
-        if any(kw in func_body for kw in keywords):
-            results.append({"name": func_name, "body": func_body})
-
-    return results
+def _truncate(value: str | None, key: str) -> str | None:
+    if value is None:
+        return None
+    limit = DB_LIMITS.get(key)
+    if limit and len(value) > limit:
+        return value[:limit]
+    return value
 
 
 @celery.task(name="run_llm_audit", bind=True)
@@ -78,121 +38,61 @@ def run_llm_audit(self, project_id: int) -> None:
                 .all()
             )
 
+            file_paths = []
             for pf in files:
-                file_path = os.path.join("uploads", str(project_id), pf.file_path)
-                if not os.path.isfile(file_path):
-                    continue
                 if not pf.file_path.endswith(".sol"):
                     continue
-
-                with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-
-                contract_name = os.path.basename(pf.file_path)
-
-                # Generate contract summary
-                summary_messages = [
-                    {
-                        "role": "user",
-                        "content": (
-                            f'Analyze this Solidity contract and provide a structured summary with: '
-                            f'1) interface description, 2) state variables, '
-                            f'3) function signatures and descriptions.\n\n'
-                            f"Contract:\n{content}\n\n"
-                            f'Output JSON: {{"interface": "...", "state_variables": [...], '
-                            f'"functions": [...]}}'
-                        ),
-                    }
-                ]
-                try:
-                    summary_text = chat_completion(summary_messages)
-                except Exception:
-                    logger.warning("Failed to generate summary for %s", contract_name)
+                abs_path = get_project_file_path(project_id, pf.file_path)
+                if not os.path.isfile(abs_path):
                     continue
+                file_paths.append((pf.id, abs_path))
 
-                key_functions = _extract_key_functions(content)
-                collection = get_vulnerability_collection()
+        self.update_state(state="PROGRESS", meta={"step": "start"})
 
-                for func in key_functions:
-                    try:
-                        embedding = get_embedding(func["body"])
-                    except Exception:
-                        logger.warning(
-                            "Failed to get embedding for %s.%s",
-                            contract_name,
-                            func["name"],
+        engine = LLMAuditEngine()
+        result = engine.execute(project_id, file_paths)
+
+        saved = 0
+        skipped = 0
+        for finding in result["audit_results"]:
+            try:
+                with get_sync_session() as session:
+                    session.add(
+                        LLMAuditResult(
+                            project_id=project_id,
+                            contract_name=_truncate(finding["contract_name"], "contract_name"),
+                            function_name=_truncate(finding["function_name"], "function_name"),
+                            vulnerability_description=finding["vulnerability_description"],
+                            severity=_truncate(finding["severity"], "severity"),
+                            suggested_fix=finding["suggested_fix"],
+                            gas_optimization=finding["gas_optimization"],
                         )
-                        continue
+                    )
+                    session.commit()
+                    saved += 1
+            except Exception:
+                logger.warning(
+                    "Failed to save LLM audit finding for %s.%s",
+                    _truncate(finding.get("contract_name", "?"), "contract_name"),
+                    _truncate(finding.get("function_name", "?"), "function_name"),
+                )
+                skipped += 1
 
-                    try:
-                        query_results = collection.query(
-                            query_embeddings=[embedding],
-                            n_results=int(os.environ.get("RAG_TOP_K", 5)),
-                        )
-                    except Exception:
-                        logger.warning("ChromaDB query failed for %s.%s", contract_name, func["name"])
-                        query_results = {"documents": [[]], "metadatas": [[]]}
+        self.update_state(
+            state="PROGRESS",
+            meta={
+                "step": "complete",
+                "functions_audited": result["functions_audited"],
+                "findings_saved": saved,
+                "findings_skipped": skipped,
+            },
+        )
+        logger.info(
+            "LLM audit completed for project %d: %d saved, %d skipped",
+            project_id, saved, skipped,
+        )
 
-                    retrieved_docs = query_results.get("documents", [[]])[0]
-                    retrieved_metas = query_results.get("metadatas", [[]])[0]
-
-                    vuln_texts = []
-                    for doc, meta in zip(retrieved_docs, retrieved_metas):
-                        title = meta.get("title", "Unknown") if meta else "Unknown"
-                        vuln_texts.append(f"- {title}: {doc}")
-                    retrieved_vulnerabilities = "\n".join(vuln_texts) or "None found"
-
-                    audit_messages = [
-                        {
-                            "role": "user",
-                            "content": (
-                                f"You are a Solidity security auditor.\n\n"
-                                f"Contract Summary:\n{summary_text}\n\n"
-                                f"Function to audit:\n{func['body']}\n\n"
-                                f"Similar vulnerabilities found via RAG:\n"
-                                f"{retrieved_vulnerabilities}\n\n"
-                                f"Identify vulnerabilities, severity, suggested fixes, "
-                                f"and gas optimizations for this function.\n"
-                                f'Return a JSON array of objects: [{{"vulnerability_description": "...", '
-                                f'"severity": "...", "suggested_fix": "...", '
-                                f'"gas_optimization": "..."}}]'
-                            ),
-                        }
-                    ]
-
-                    try:
-                        response_text = chat_completion(audit_messages)
-                        json_match = re.search(r"\[.*\]", response_text, re.DOTALL)
-                        if not json_match:
-                            continue
-                        findings = json.loads(json_match.group())
-                    except (json.JSONDecodeError, Exception):
-                        logger.warning(
-                            "Failed to parse LLM audit response for %s.%s",
-                            contract_name,
-                            func["name"],
-                        )
-                        continue
-
-                    for finding in findings:
-                        session.add(
-                            LLMAuditResult(
-                                project_id=project_id,
-                                contract_name=contract_name,
-                                function_name=func["name"],
-                                vulnerability_description=finding.get(
-                                    "vulnerability_description", ""
-                                ),
-                                severity=finding.get("severity", "unknown"),
-                                suggested_fix=finding.get("suggested_fix"),
-                                gas_optimization=finding.get("gas_optimization"),
-                            )
-                        )
-
-            session.commit()
-            logger.info("LLM audit completed for project %d", project_id)
-
-    except Exception:
+    except Exception as e:
         logger.exception("LLM audit failed for project %d", project_id)
-        self.update_state(state="FAILURE", meta={"exc": str(Exception)})
+        self.update_state(state="FAILURE", meta={"exc": str(e)})
         raise

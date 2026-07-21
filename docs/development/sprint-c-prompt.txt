@@ -1,0 +1,92 @@
+You are working on the SolidGuard project at D:\MetaGPT_Project\SolidGuard.
+
+Execute Sprint C: Reliability & Quality Improvements. Make ALL the following changes directly to the codebase.
+
+## Fix #17 — LLM response JSON parsing fragile
+File: `backend/app/services/engine/llm_audit.py`
+
+The current code uses `re.search(r"\[.*\]", response_text, re.DOTALL)` to extract JSON from LLM responses. This is fragile.
+
+Replace the JSON parsing block (around line 195-200) with a robust multi-stage parser:
+1. Try `json.loads()` on trimmed response first
+2. Try extracting from markdown code blocks (```json ... ```)
+3. Try the existing regex fallback
+4. Log warning if all attempts fail
+
+Add a helper function `_parse_llm_json(text: str) -> list | None` at the top of the file (after imports) that implements this pipeline.
+
+## Fix #18 — polish_with_llm trusts LLM output
+File: `backend/app/services/report_generator.py`
+
+In the `polish_with_llm` function, after `json.loads(response_text)`:
+1. Validate the result is a dict with expected keys: "slither_findings", "fuzzing_findings", "llm_findings"
+2. Validate each finding list is actually a list
+3. If validation fails, return the original findings unchanged
+4. Add a log warning when validation fails
+
+## Fix #19 — State machine has no DB-level constraints
+File: `backend/app/state/project_state.py` — no changes needed here
+New file: `backend/alembic/versions/012_add_state_machine_constraints.py`
+
+Create an Alembic migration that:
+- Adds a CHECK constraint on `projects.status` column to only allow values: 'uploaded', 'processing', 'ready'
+- Adds a `version` integer column to `projects` table (default 0) for optimistic locking
+- Creates index on `projects.status`
+
+## Fix #20 — __pycache__ in VCS
+File: `.gitignore`
+
+Add these patterns if not already present:
+```
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+```
+
+## Fix #21 — Dead code models_old.py
+Delete the file: `backend/app/models_old.py`
+
+## Fix #22 — Incomplete health check
+File: `backend/app/main.py`
+
+Extend the `/health` endpoint to check:
+- PostgreSQL (existing SELECT 1)
+- Redis (PING command using redis.asyncio)
+- Return JSON with component-wise status: `{"status": "ok", "checks": {"postgres": "ok", "redis": "ok"}}`
+- If any check fails, return status "degraded" with 503 status code
+- Add timeout of 3 seconds per check
+
+## Fix #23 — Docker image layers contain root-owned files
+File: `docker/Dockerfile`
+
+Add `RUN chown -R appuser:appuser /app` before the `USER appuser` line (if not already present).
+Also add `--chown=appuser:appuser` to the COPY commands where applicable.
+
+## Fix #24 — No graceful shutdown
+File: `backend/app/main.py`
+
+Add a shutdown event handler:
+```python
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("Shutting down: closing database connections...")
+    await async_session.remove() if hasattr(async_session, 'remove') else None
+    async_engine.dispose()
+    logger.info("Shutdown complete.")
+```
+
+Import `async_engine` from `app.database`.
+
+Also in `backend/app/celery_app.py`, add:
+```python
+celery.conf.update(
+    worker_shutdown_timeout=30,
+)
+```
+
+## CONSTRAINTS
+- Only modify the files listed above
+- Do NOT modify any files outside the SolidGuard project directory
+- Do NOT create test files (Sprint D handles testing)
+- Preserve all existing functionality

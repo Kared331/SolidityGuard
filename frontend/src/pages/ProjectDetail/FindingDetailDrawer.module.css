@@ -1,0 +1,109 @@
+.fdd-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+}
+
+.fdd-row {
+  display: flex;
+  align-items: center;
+}
+
+.fdd-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.fdd-section-title {
+  font-size: var(--ds-font-size-sm);
+  font-weight: var(--ds-font-weight-semibold);
+  color: var(--ds-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.fdd-text {
+  font-size: var(--ds-font-size-base);
+  color: var(--ds-color-text-secondary);
+  line-height: var(--ds-line-height-base);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.fdd-field-value {
+  font-size: var(--ds-font-size-base);
+  color: var(--ds-color-text-primary);
+  line-height: var(--ds-line-height-base);
+}
+
+.fdd-meta-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.fdd-meta-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.fdd-code-block {
+  background: var(--ds-color-neutral-50);
+  padding: var(--ds-space-4);
+  border-radius: var(--ds-radius-lg);
+  overflow: auto;
+  font-family: var(--ds-font-family-mono);
+  font-size: 13px;
+  line-height: 20px;
+  margin: 0;
+  border: 1px solid var(--ds-color-border-default);
+}
+
+.fdd-code-block code {
+  font-family: var(--ds-font-family-mono);
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ds-color-text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Confidence bar */
+.fdd-confidence {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.fdd-confidence-bar {
+  display: flex;
+  gap: 2px;
+}
+
+.fdd-confidence-segment {
+  width: 16px;
+  height: 4px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-color-neutral-200);
+}
+
+.fdd-confidence-segment--filled {
+  background: var(--ds-color-brand);
+}
+
+.fdd-confidence-label {
+  font-size: var(--ds-font-size-xs);
+  color: var(--ds-color-text-tertiary);
+}
+
+/* Footer */
+.fdd-footer {
+  display: flex;
+  align-items: center;
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-color-border-default);
+  margin-top: var(--ds-space-2);
+}

@@ -1,34 +1,63 @@
-import os
 import sys
 import logging
+from functools import lru_cache
 
-# ─── Logging (4.21) ─────────────────────────────────────────────
-LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+from pydantic import BaseModel  # noqa: F401
+
+from app.llm.config import get_config
+
+# logging 延迟初始化 — 在 Settings.__init__ 中通过配置设置等级
 logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.INFO),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
     stream=sys.stdout,
 )
 logger = logging.getLogger("solidiguard")
 
-# ─── Database (4.15) ────────────────────────────────────────────
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if not DATABASE_URL:
-    logger.warning(
-        "DATABASE_URL not set, using default local PostgreSQL connection"
-    )
-    DATABASE_URL = "postgresql+asyncpg://solidiguard:solidiguard@localhost:5432/solidiguard"
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-APP_PORT = int(os.environ.get("APP_PORT", "8000"))
+class Settings:
+    def __init__(self):
+        config = get_config()
 
-# ─── Upload limits (1.24) ───────────────────────────────────────
-MAX_UPLOAD_SIZE_MB = int(os.environ.get("MAX_UPLOAD_SIZE_MB", "50"))
-MAX_UPLOAD_SIZE = MAX_UPLOAD_SIZE_MB * 1024 * 1024
+        # app
+        self.API_KEY: str = config.app.apiKey
+        self.APP_PORT: int = config.app.port
+        self.MAX_UPLOAD_SIZE_MB: int = config.app.maxUploadSizeMb
+        self.CLEANUP_DAYS: int = config.app.cleanupDays
+        self.LOG_LEVEL: str = config.app.logLevel
+        self.CORS_ORIGINS: str = config.app.corsOrigins
+        self.RATE_LIMIT: str = config.app.rateLimit
+        self.UPLOAD_DIR: str = config.app.uploadDir
+        self.REPORT_DIR: str = config.app.reportDir
+        self.TOKEN_BUDGET_PER_PROJECT: int = config.app.tokenBudget
+        self.MAX_LLM_CALLS_PER_PROJECT: int = config.app.maxLLMCallsPerProject
 
-# ─── Cleanup (5.20) ─────────────────────────────────────────────
-CLEANUP_DAYS = int(os.environ.get("CLEANUP_DAYS", "30"))
+        # database
+        self.DATABASE_URL: str = config.database.url
+        self.DB_POOL_SIZE: int = config.database.poolSize
+        self.DB_MAX_OVERFLOW: int = config.database.maxOverflow
+        self.DB_POOL_RECYCLE: int = config.database.poolRecycle
 
-# ─── API Key (1.3) ──────────────────────────────────────────────
-API_KEY = os.environ.get("API_KEY", "")
+        # redis
+        self.REDIS_URL: str = config.redis.url
+
+        # rag
+        self.CHROMA_PERSIST_DIR: str = config.rag.chromaPersistDir
+        self.RAG_TOP_K: int = config.rag.topK
+
+        # 应用配置级别的 logging 等级
+        logging.getLogger().setLevel(
+            getattr(logging, self.LOG_LEVEL.upper(), logging.INFO)
+        )
+
+    @property
+    def MAX_UPLOAD_SIZE(self) -> int:
+        return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()

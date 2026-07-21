@@ -1,0 +1,73 @@
+.ds-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  border-radius: var(--ds-radius-lg);
+  border: 1px solid;
+  font-weight: var(--ds-font-weight-medium);
+  box-sizing: border-box;
+}
+
+/* --- Sizes --- */
+
+.ds-tag--sm {
+  padding: 1px 6px;
+  font-size: 11px;
+  height: 18px;
+}
+
+.ds-tag--md {
+  padding: 2px 8px;
+  font-size: var(--ds-font-size-sm);
+  height: 22px;
+}
+
+/* --- Variants --- */
+
+.ds-tag--neutral {
+  background-color: var(--ds-color-neutral-100);
+  border-color: var(--ds-color-neutral-200);
+  color: var(--ds-color-text-secondary);
+}
+
+.ds-tag--brand {
+  background-color: var(--ds-color-brand-bg);
+  border-color: var(--ds-color-brand-border);
+  color: var(--ds-color-brand);
+}
+
+.ds-tag--critical {
+  background-color: var(--ds-color-critical-bg);
+  border-color: var(--ds-color-critical-border);
+  color: var(--ds-color-critical);
+}
+
+.ds-tag--high {
+  background-color: var(--ds-color-high-bg);
+  border-color: var(--ds-color-high-border);
+  color: var(--ds-color-high);
+}
+
+.ds-tag--medium {
+  background-color: var(--ds-color-medium-bg);
+  border-color: var(--ds-color-medium-border);
+  color: var(--ds-color-medium);
+}
+
+.ds-tag--low {
+  background-color: var(--ds-color-low-bg);
+  border-color: var(--ds-color-low-border);
+  color: var(--ds-color-low);
+}
+
+.ds-tag--info {
+  background-color: var(--ds-color-info-bg);
+  border-color: var(--ds-color-info-border);
+  color: var(--ds-color-info);
+}
+
+.ds-tag--success {
+  background-color: var(--ds-color-info-bg);
+  border-color: var(--ds-color-info-border);
+  color: var(--ds-color-info);
+}

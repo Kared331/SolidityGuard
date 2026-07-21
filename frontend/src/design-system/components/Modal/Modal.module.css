@@ -1,0 +1,100 @@
+.ds-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--ds-color-bg-overlay);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: ds-modal-fade-in var(--ds-transition-normal) ease;
+}
+
+.ds-modal-dialog {
+  background-color: var(--ds-color-bg-container);
+  border-radius: var(--ds-radius-xl);
+  border: 1px solid var(--ds-color-border-default);
+  max-width: 90vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  animation: ds-modal-scale-in var(--ds-transition-normal) ease;
+  outline: none;
+}
+
+.ds-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--ds-space-4) var(--ds-space-5);
+  border-bottom: 1px solid var(--ds-color-border-default);
+  flex-shrink: 0;
+}
+
+.ds-modal-title {
+  margin: 0;
+  font-size: var(--ds-font-size-md);
+  font-weight: var(--ds-font-weight-semibold);
+  color: var(--ds-color-text-primary);
+  font-family: var(--ds-font-family);
+  line-height: var(--ds-line-height-base);
+}
+
+.ds-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ds-color-text-tertiary);
+  cursor: pointer;
+  border-radius: var(--ds-radius-lg);
+  transition: background-color var(--ds-transition-fast), color var(--ds-transition-fast);
+}
+
+.ds-modal-close:hover {
+  background-color: var(--ds-color-bg-hover);
+  color: var(--ds-color-text-primary);
+}
+
+.ds-modal-close:focus-visible {
+  outline: 2px solid var(--ds-color-border-focus);
+  outline-offset: 2px;
+}
+
+.ds-modal-body {
+  padding: var(--ds-space-5);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.ds-modal-footer {
+  padding: var(--ds-space-3) var(--ds-space-5);
+  border-top: 1px solid var(--ds-color-border-default);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ds-space-2);
+  flex-shrink: 0;
+}
+
+@keyframes ds-modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ds-modal-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

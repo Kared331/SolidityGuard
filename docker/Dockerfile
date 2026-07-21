@@ -3,8 +3,10 @@ FROM python:3.11-slim
 # 1.13: Install Foundry without curl|bash – download pinned binary directly
 ARG FOUNDRY_TAG=nightly-2024-02-01
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends git build-essential libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info curl && \
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || true && \
+    sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || true && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends git build-essential libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 libffi-dev shared-mime-info curl && \
     rm -rf /var/lib/apt/lists/*
 
 # 1.12: Create non-root user
@@ -13,26 +15,28 @@ RUN groupadd -g 1000 appuser && \
 
 WORKDIR /app
 
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --chown=appuser:appuser backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
+
+# Install sentence-transformers for local embedding
+RUN pip install --no-cache-dir sentence-transformers -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
 
 # Install slither-analyzer
-RUN pip install --no-cache-dir slither-analyzer
+RUN pip install --no-cache-dir slither-analyzer -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
 
-# 1.13: Install Foundry by downloading release tarball (not curl|bash)
+# 1.13: Install Foundry v1.7.1 from GitHub release (static binary, works on any Linux)
 RUN curl -L -o /tmp/foundry.tar.gz \
-      "https://github.com/foundry-rs/foundry/releases/download/${FOUNDRY_TAG}/foundry_${FOUNDRY_TAG}_linux_amd64.tar.gz" && \
+      "https://github.com/foundry-rs/foundry/releases/download/v1.7.1/foundry_v1.7.1_alpine_amd64.tar.gz" && \
     tar -xzf /tmp/foundry.tar.gz -C /usr/local/bin/ && \
     rm /tmp/foundry.tar.gz && \
-    chmod +x /usr/local/bin/forge /usr/local/bin/cast /usr/local/bin/anvil /usr/local/bin/chisel 2>/dev/null || true
+    chmod +x /usr/local/bin/forge /usr/local/bin/cast /usr/local/bin/anvil /usr/local/bin/chisel
 
 # Create directories that the app needs
-RUN mkdir -p /app/uploads /app/chroma_data /app/reports && \
-    chown -R appuser:appuser /app
+RUN mkdir -p /app/uploads /app/chroma_data /app/reports
 
-COPY backend/ .
+COPY --chown=appuser:appuser backend/ .
 
-# 1.12: Ensure all files are accessible by appuser
+# Ensure all files are accessible by appuser
 RUN chown -R appuser:appuser /app
 
 USER appuser

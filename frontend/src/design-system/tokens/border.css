@@ -1,0 +1,5 @@
+/* ===== Borders ===== */
+:root {
+  --ds-border-width:        1px;
+  --ds-border-width-strong: 2px;
+}

@@ -1,12 +1,11 @@
 FROM node:20-alpine AS build
-ARG VITE_API_KEY=
 ARG VITE_API_BASE_URL=
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-# Inject build-time env vars
-RUN VITE_API_KEY="${VITE_API_KEY}" VITE_API_BASE_URL="${VITE_API_BASE_URL}" npm run build
+# Inject build-time env vars (no API key — it is injected at runtime by nginx)
+RUN VITE_API_BASE_URL="${VITE_API_BASE_URL}" npm run build
 
 FROM nginx:alpine
 
@@ -19,8 +18,9 @@ RUN addgroup -g 1000 -S appuser && \
     chown appuser:appuser /var/run/nginx.pid
 
 COPY --from=0 --chown=appuser:appuser /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 
-USER appuser
+# Use envsubst to inject API_KEY at runtime, then start nginx
+CMD ["sh", "-c", "envsubst '$API_KEY' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
 
 EXPOSE 8080

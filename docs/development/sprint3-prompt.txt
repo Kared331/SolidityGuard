@@ -1,0 +1,62 @@
+Execute Sprint 3: Engine Abstraction + Pipeline Orchestration + Storage Path Unification.
+
+Working directory: D:\MetaGPT_Project\SolidGuard
+
+Read the full task definition at .opencode_tasks/sprint3_task.md for complete instructions.
+
+OVERVIEW:
+Sprint 1 completed (models/ package) and Sprint 2 completed (services/ + schemas/ + dependencies.py).
+Now you need to:
+
+PHASE A - Storage path unification:
+1. Create services/infra/__init__.py (empty)
+2. Create services/infra/storage.py with UPLOAD_DIR, REPORT_DIR, get_project_dir(), get_report_dir(), get_project_file_path()
+3. Replace ALL hardcoded "uploads" and "reports" paths in tasks/ and services/ with storage.py references
+
+PHASE B - Engine abstraction layer:
+4. Create services/engine/__init__.py (empty)
+5. Create services/engine/base.py - BaseEngine ABC with __init__ (logger) and execute (abstract)
+6. Create services/engine/upload.py - UploadEngine: extract from tasks/process_upload.py (zip/tar extraction, sol scanning, safe path check)
+7. Create services/engine/slither.py - SlitherEngine: extract from tasks/run_slither.py (subprocess, JSON parsing, detection_ref building)
+8. Create services/engine/fuzzer.py - FuzzerEngine: extract from tasks/run_fuzzer.py (forge init, contract scanning, fuzz test generation, forge test, failure parsing)
+9. Create services/engine/llm_audit.py - LLMAuditEngine: extract from tasks/run_llm_audit.py (function extraction, summary, embedding, RAG query, LLM audit, finding parsing)
+10. Create services/engine/report.py - ReportEngine: extract from tasks/generate_report.py (aggregate, polish, generate html/pdf/word)
+11. Create services/engine/swc_sync.py - SWCSyncEngine: extract from tasks/sync_swc.py (fetch GitHub, parse markdown, generate embeddings, store in ChromaDB)
+
+PHASE C - Pipeline orchestrator:
+12. Create tasks/pipeline.py with build_analysis_pipeline, build_fuzz_pipeline, build_llm_audit_pipeline, build_report_pipeline, build_parallel_analysis_pipeline
+
+PHASE D - Refactor tasks to lightweight shells:
+13. Refactor tasks/process_upload.py - call UploadEngine + DB write + update_state
+14. Refactor tasks/run_slither.py - call SlitherEngine + DB write + update_state
+15. Refactor tasks/run_fuzzer.py - call FuzzerEngine + DB write + update_state
+16. Refactor tasks/run_llm_audit.py - call LLMAuditEngine + DB write + update_state
+17. Refactor tasks/generate_report.py - call ReportEngine + DB write + update_state
+18. Refactor tasks/sync_swc.py - call SWCSyncEngine + DB write + update_state
+19. Update tasks/cleanup.py - replace hardcoded paths with storage.py constants
+
+PHASE E - Update service layer to use Pipeline:
+20. Update services/analysis_service.py - use build_analysis_pipeline().apply_async() instead of run_slither.delay()
+21. Update services/fuzz_service.py - use build_fuzz_pipeline().apply_async()
+22. Update services/audit_service.py - use build_llm_audit_pipeline().apply_async()
+23. Update services/report_service.py - use build_report_pipeline().apply_async()
+
+CRITICAL CONSTRAINTS:
+- Engine classes are pure Python, NO Celery dependency
+- Engine classes do NOT write to database (task shell does DB write)
+- Engine classes do NOT self-construct paths (paths passed as parameters)
+- Each Engine.execute() returns a dict with results
+- Task shell handles: path prep -> Engine call -> DB write -> progress update
+- cleanup.py is simple enough to NOT use an Engine, just replace path constants
+- Do NOT modify Sprint 1 models/ (frozen)
+- Do NOT modify Sprint 2 schemas/ or dependencies.py (frozen)
+- Do NOT create state machine (Sprint 4)
+- Do NOT add status checks to engines (Sprint 4)
+- Preserve all existing function logic exactly (no optimization, no "improvement")
+
+VERIFICATION:
+- grep -rn '"uploads"' backend/app/ (should only appear in storage.py and config.py)
+- grep -rn '"reports"' backend/app/ (should only appear in storage.py)
+- All Engine classes importable
+- Pipeline functions importable
+- All files compile without syntax errors

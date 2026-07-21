@@ -1,0 +1,70 @@
+Execute Sprint 2: Service Layer Abstraction + Schema Definition.
+
+Working directory: D:\MetaGPT_Project\SolidGuard
+
+Read the full task definition at .opencode_tasks/sprint2_task.md for complete instructions.
+
+OVERVIEW:
+Sprint 1 completed - models/ package exists with all 9 classes split into files.
+Now you need to:
+
+PHASE A - Create Pydantic Schemas:
+1. Create backend/app/schemas/ package
+2. Create schemas/common.py - TaskTriggerResponse, PaginatedResponse
+3. Create schemas/project.py - ProjectResponse, ProjectFileResponse
+4. Create schemas/analysis.py - AnalysisTriggerResponse, DetectionResponse
+5. Create schemas/fuzz.py - FuzzTriggerResponse, FuzzResultResponse
+6. Create schemas/audit.py - AuditTriggerResponse, LLMAuditResultResponse
+7. Create schemas/detection.py - FalsePositiveRequest, FalsePositiveResponse
+8. Create schemas/report.py - ReportCreateRequest, ReportTriggerResponse, ReportListItemResponse
+9. Create schemas/knowledge.py - SyncTriggerResponse, VulnerabilityItemResponse, VulnerabilityPaginatedResponse
+
+PHASE B - Create dependencies.py:
+10. Create backend/app/dependencies.py with get_db() async generator
+
+PHASE C - Create Business Service Layer:
+11. Create services/project_service.py - extract from api/projects.py
+12. Create services/analysis_service.py - extract from api/analysis.py
+13. Create services/fuzz_service.py - extract from api/fuzz.py
+14. Create services/audit_service.py - extract from api/llm_audit.py
+15. Create services/detection_service.py - extract from api/detections.py
+16. Create services/report_service.py - extract from api/reports.py
+17. Create services/knowledge_service.py - extract from api/knowledge.py + api/vulnerabilities.py
+
+PHASE D - Refactor API handlers to thin routers:
+18. Refactor api/projects.py - only param validation + call service + return schema
+19. Refactor api/analysis.py
+20. Refactor api/fuzz.py
+21. Refactor api/llm_audit.py
+22. Refactor api/detections.py
+23. Refactor api/reports.py
+24. Refactor api/knowledge.py
+25. Refactor api/vulnerabilities.py
+
+CRITICAL CONSTRAINTS:
+- API paths, HTTP methods, request params, response format MUST NOT change
+- Service methods receive db: AsyncSession parameter
+- API handlers MUST NOT contain SQLAlchemy query code
+- Do NOT create engine/ abstraction (Sprint 3)
+- Do NOT create state machine (Sprint 4)
+- Do NOT modify models/ (Sprint 1 frozen)
+- Do NOT modify tasks/ (Sprint 3 will handle)
+- Keep Celery task dispatch calls in services (process_upload.delay, run_slither.delay, etc.)
+- FileResponse construction stays in API handler (not in service)
+
+SCHEMA RULES:
+- Every field must have a corresponding field in the current API response
+- Do NOT add fields that dont exist in current responses
+- Use Pydantic v2 syntax (BaseModel, model_config)
+- All schemas use from __future__ import annotations
+
+SERVICE RULES:
+- Each service function does ONE thing
+- Services return ORM Model or dict, handler constructs HTTP response
+- Services manage their own transaction (commit/rollback)
+- get_project_or_404 is a shared utility in project_service.py
+- File validation logic (ALLOWED_EXTENSIONS, MIME types, magic bytes) moves from api/projects.py to project_service.py
+
+VERIFICATION:
+- All API endpoints must return identical JSON as before Sprint 2
+- All existing imports must continue to work

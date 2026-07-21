@@ -1,0 +1,18 @@
+.project-card__body {
+  cursor: pointer;
+}
+
+.project-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.project-card__meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-font-size-sm);
+  color: var(--ds-color-text-secondary);
+  line-height: var(--ds-line-height-sm);
+}

@@ -1,0 +1,38 @@
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.paragraph {
+  font-size: var(--ds-font-size-base);
+  line-height: var(--ds-line-height-md);
+  color: var(--ds-color-text-secondary);
+  margin: 0;
+}
+
+.counts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-font-size-base);
+  color: var(--ds-color-text-primary);
+}
+
+.countsLabel {
+  color: var(--ds-color-text-tertiary);
+}
+
+.riskRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding-top: var(--ds-space-2);
+  border-top: 1px solid var(--ds-color-border-default);
+}
+
+.riskLabel {
+  font-size: var(--ds-font-size-base);
+  color: var(--ds-color-text-secondary);
+}

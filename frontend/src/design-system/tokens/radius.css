@@ -1,0 +1,12 @@
+/* ===== Border Radius ===== */
+:root {
+  --ds-radius-none:   0;
+  --ds-radius-xs:     2px;
+  --ds-radius-sm:     4px;
+  --ds-radius-md:     6px;
+  --ds-radius-lg:     8px;    /* 默认容器圆角: 按钮、输入框、tag */
+  --ds-radius-xl:     12px;   /* 卡片、对话框、菜单 */
+  --ds-radius-2xl:    16px;
+  --ds-radius-3xl:    24px;
+  --ds-radius-full:   9999px; /* 头像、开关、进度条 */
+}

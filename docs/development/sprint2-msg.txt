@@ -1,0 +1,7 @@
+Execute Sprint 2: Service Layer Abstraction + Schema Definition.
+
+Working directory: D:\MetaGPT_Project\SolidGuard
+
+Read the full task at .opencode_tasks/sprint2_task.md for detailed instructions.
+
+Create all schemas, dependencies, services, then refactor all API handlers to thin routers. Do NOT modify models/ or tasks/. Keep API response format identical.

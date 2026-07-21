@@ -1,0 +1,10 @@
+.format-selector {
+  display: flex;
+  gap: var(--ds-space-2);
+}
+
+.format-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}

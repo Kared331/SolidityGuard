@@ -1,0 +1,36 @@
+Fix the route prefix conflicts in the SolidGuard project at D:\MetaGPT_Project\SolidGuard.
+
+## Problem
+In `backend/app/api/router.py`, routers are registered with prefix `/api/v1/projects`:
+```python
+api_router.include_router(projects_router, prefix="/api/v1/projects", ...)
+api_router.include_router(analysis_router, prefix="/api/v1/projects", ...)
+api_router.include_router(llm_audit_router, prefix="/api/v1/projects", ...)
+```
+
+But the route definitions in individual files ALSO include `/projects` in their paths, causing double-prefix:
+- `projects.py`: `@router.post("/projects")` → actual: `/api/v1/projects/projects` (WRONG)
+- `analysis.py`: `@router.post("/projects/{project_id}/analyze")` → actual: `/api/v1/projects/projects/{project_id}/analyze` (WRONG)
+- `llm_audit.py`: `@router.post("/projects/{project_id}/llm-audit")` → actual: `/api/v1/projects/projects/{project_id}/llm-audit` (WRONG)
+
+The correct pattern is in `fuzz.py` which uses `@router.post("/{project_id}/fuzz")` (no `/projects` prefix).
+
+## Required Changes
+
+### 1. `backend/app/api/projects.py`
+- Change `@router.post("/projects", ...)` to `@router.post("", ...)`
+- Change `@router.get("/projects/{project_id}/files", ...)` to `@router.get("/{project_id}/files", ...)`
+
+### 2. `backend/app/api/analysis.py`
+- Change `@router.post("/projects/{project_id}/analyze")` to `@router.post("/{project_id}/analyze")`
+- Change `@router.get("/projects/{project_id}/analyses", ...)` to `@router.get("/{project_id}/analyses", ...)`
+
+### 3. `backend/app/api/llm_audit.py`
+- Change `@router.post("/projects/{project_id}/llm-audit")` to `@router.post("/{project_id}/llm-audit")`
+- Change `@router.get("/projects/{project_id}/llm-audit-results", ...)` to `@router.get("/{project_id}/llm-audit-results", ...)`
+
+### 4. `backend/app/api/v1/events.py`
+- Add `verify_api_key` dependency to the events router registration in router.py
+- In `router.py`, change: `api_router.include_router(events_router, prefix="/api/v1")` to `api_router.include_router(events_router, prefix="/api/v1", dependencies=[Depends(verify_api_key)])`
+
+DO NOT change any other files. Only make the specific changes listed above.

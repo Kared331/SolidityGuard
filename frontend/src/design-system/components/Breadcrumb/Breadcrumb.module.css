@@ -1,0 +1,30 @@
+.ds-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  flex-wrap: wrap;
+}
+
+.ds-breadcrumb-item {
+  font-size: var(--ds-font-size-sm);
+  font-family: var(--ds-font-family);
+  color: var(--ds-color-text-tertiary);
+  text-decoration: none;
+  line-height: var(--ds-line-height-base);
+}
+
+a.ds-breadcrumb-item:hover {
+  color: var(--ds-color-text-secondary);
+}
+
+.ds-breadcrumb-item--active {
+  color: var(--ds-color-text-primary);
+  font-weight: var(--ds-font-weight-medium);
+}
+
+.ds-breadcrumb-separator {
+  color: var(--ds-color-neutral-200);
+  user-select: none;
+  font-size: var(--ds-font-size-sm);
+  font-family: var(--ds-font-family);
+}

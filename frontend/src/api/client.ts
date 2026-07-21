@@ -1,11 +1,10 @@
 import axios from 'axios';
 
-// API key is injected at build time via VITE_API_KEY env var
-const apiKey = import.meta.env.VITE_API_KEY || '';
+// API key is NOT included in frontend — it is injected by nginx proxy at runtime
+// This prevents the API key from being exposed in the JavaScript bundle
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
-  headers: apiKey ? { 'X-API-Key': apiKey } : {},
 });
 
 export default client;

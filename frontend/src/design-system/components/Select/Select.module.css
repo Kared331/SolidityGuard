@@ -1,0 +1,97 @@
+.ds-select {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.ds-select__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--ds-color-border-default);
+  border-radius: var(--ds-radius-lg);
+  background-color: var(--ds-color-bg-container);
+  font-family: var(--ds-font-family);
+  font-size: var(--ds-font-size-base);
+  color: var(--ds-color-text-primary);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: border-color var(--ds-transition-fast);
+}
+
+.ds-select__trigger:hover {
+  border-color: var(--ds-color-border-hover);
+}
+
+.ds-select--open .ds-select__trigger {
+  border-color: var(--ds-color-border-focus);
+  outline: 2px solid var(--ds-color-border-focus);
+}
+
+.ds-select--disabled .ds-select__trigger {
+  background-color: var(--ds-color-neutral-100);
+  color: var(--ds-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.ds-select__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-select__placeholder {
+  color: var(--ds-color-text-tertiary);
+}
+
+.ds-select__chevron {
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  margin-left: 8px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--ds-color-text-tertiary);
+  transition: transform var(--ds-transition-fast);
+}
+
+.ds-select--open .ds-select__chevron {
+  transform: rotate(180deg);
+}
+
+.ds-select__dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background-color: var(--ds-color-bg-container);
+  border: 1px solid var(--ds-color-border-default);
+  border-radius: var(--ds-radius-xl);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 100;
+  box-sizing: border-box;
+}
+
+.ds-select__option {
+  padding: 6px 12px;
+  font-family: var(--ds-font-family);
+  font-size: var(--ds-font-size-base);
+  color: var(--ds-color-text-primary);
+  cursor: pointer;
+  transition: background-color var(--ds-transition-fast);
+}
+
+.ds-select__option:hover {
+  background-color: var(--ds-color-bg-hover);
+}
+
+.ds-select__option--selected {
+  color: var(--ds-color-brand);
+}

@@ -1,18 +1,18 @@
 <div align="center">
 
-# 🛡️ SolidiGuard
+# SolidGuard
 
-### Enterprise Solidity Smart Contract Audit Platform
+**Enterprise-Grade Solidity Smart Contract Audit Platform**
 
-[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.128+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React 18](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 Automated vulnerability detection through **static analysis**, **fuzz testing**, and **LLM-powered deep audit** with RAG enhancement.
 
-[Quick Start](#-quick-start) · [Features](#-features) · [API Reference](#-api-reference) · [Architecture](#-architecture) · [Development](#-development-guide)
+[Quick Start](#-quick-start) · [Features](#-features) · [Architecture](#-architecture) · [API Reference](#-api-reference) · [Documentation](#-documentation)
 
 </div>
 
@@ -21,307 +21,497 @@ Automated vulnerability detection through **static analysis**, **fuzz testing**,
 ## Table of Contents
 
 - [Features](#-features)
+- [Tech Stack](#-tech-stack)
 - [Quick Start](#-quick-start)
 - [Configuration](#-configuration)
 - [Architecture](#-architecture)
 - [Audit Pipeline](#-audit-pipeline)
 - [API Reference](#-api-reference)
-- [Deployment Guide](#-deployment-guide)
-- [Development Guide](#-development-guide)
 - [Project Structure](#-project-structure)
+- [Documentation](#-documentation)
+- [Development Guide](#-development-guide)
+- [Testing](#-testing)
 - [FAQ](#-faq)
 - [Contributing](#-contributing)
 - [License](#-license)
 
 ---
 
-## ✨ Features
+## Features
 
-| Feature | Description | Tool |
-|---------|-------------|------|
-| **Static Analysis** | Detect common Solidity vulnerabilities (reentrancy, overflow, etc.) | Slither |
-| **Fuzz Testing** | Property-based testing with automatic test generation | Foundry |
-| **LLM Deep Audit** | AI-powered code review with RAG-enhanced pattern matching | OpenAI / Anthropic |
-| **False Positive Feedback** | Mark detections as false positive; auto-excluded from reports | Built-in |
-| **Vulnerability Knowledge Base** | SWC Registry sync with vector search | Chroma |
-| **Multi-format Reports** | Professional audit reports with severity coding | HTML / PDF / Word |
+| Feature | Description | Implementation |
+|---------|-------------|----------------|
+| **Static Analysis** | Detect common Solidity vulnerabilities (reentrancy, overflow, access control, etc.) | [Slither](https://github.com/crytic/slither) |
+| **Fuzz Testing** | Property-based testing with automatic test generation and edge-case discovery | [Foundry](https://github.com/foundry-rs/foundry) |
+| **LLM Deep Audit** | AI-powered code review with configurable token budgets and call limits | OpenAI / Anthropic / Mimo |
+| **RAG Enhancement** | Retrieve similar known vulnerabilities from SWC Registry to augment LLM context | ChromaDB + SWC Registry |
+| **Multi-Provider LLM** | Support OpenAI-compatible APIs and Anthropic Messages API with provider routing | HTTPX async client |
+| **False Positive Feedback** | Mark detections as false positive; auto-excluded from subsequent reports | Built-in |
+| **Vulnerability Knowledge Base** | SWC Registry sync with vector search and semantic matching | ChromaDB |
+| **Multi-format Reports** | Professional audit reports with severity coding (Critical/High/Medium/Low/Info) | HTML / PDF / Word |
+| **Real-time Progress** | SSE-based live task progress and result notifications | EventSource |
+| **Rate Limiting** | Configurable per-IP rate limiting via Redis backend | SlowAPI |
+| **Input Sanitization** | LLM prompt injection defense and malicious input filtering | Custom sanitizer |
 
 ---
 
-## 🚀 Quick Start
+## Tech Stack
+
+### Backend
+
+| Component | Technology |
+|-----------|------------|
+| **Framework** | FastAPI (async) |
+| **Task Queue** | Celery + Redis broker |
+| **ORM** | SQLAlchemy (async) + Alembic migrations |
+| **Database** | PostgreSQL 15 |
+| **Cache / Broker** | Redis 7 |
+| **Vector Store** | ChromaDB (local persistence) |
+| **HTTP Client** | HTTPX (async) |
+| **Report Generation** | Jinja2 + WeasyPrint (PDF) + python-docx (Word) |
+
+### Frontend
+
+| Component | Technology |
+|-----------|------------|
+| **Framework** | React 18 + TypeScript |
+| **Build Tool** | Vite 5 |
+| **State Management** | Zustand |
+| **Data Fetching** | TanStack React Query + Axios |
+| **Routing** | React Router v6 |
+
+### Analysis Tools
+
+| Tool | Purpose |
+|------|---------|
+| **Slither** | Static analysis for Solidity |
+| **Foundry** | Fuzz testing framework |
+| **solc-select** | Solidity compiler version management |
+
+---
+
+## Quick Start
 
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/) installed
-- API key for your LLM provider ([OpenAI](https://platform.openai.com), [Anthropic](https://console.anthropic.com), or compatible)
-- API key for embeddings (OpenAI by default, or configure a local provider)
+- LLM API key (OpenAI, Anthropic, or any OpenAI-compatible provider)
 
 ### 1. Clone and Configure
 
 ```bash
-git clone https://github.com/your-org/solidiguard.git
-cd solidiguard
+git clone git@github.com:Kared331/SolidityGuard.git
+cd SolidityGuard
 
 # Copy environment template
 cp .env.example .env
+cp solidguard.json.example solidguard.json
 ```
 
 ### 2. Set Environment Variables
 
-Edit `.env` with your API keys:
+Edit `.env`:
 
 ```env
-# Required: LLM Configuration
-LLM_PROVIDER=openai              # openai | anthropic | local
-LLM_API_KEY=sk-your-key-here
-LLM_MODEL_NAME=gpt-4o
+# Database
+POSTGRES_USER=solidguard
+POSTGRES_PASSWORD=your-secure-password
+POSTGRES_DB=solidguard
 
-# Required: Embedding Configuration
-EMBEDDING_PROVIDER=openai
-EMBEDDING_API_KEY=sk-your-key-here
+# Redis
+REDIS_PASSWORD=your-secure-password
 
-# Optional: Override defaults
-# LLM_BASE_URL=https://api.openai.com/v1
-# EMBEDDING_BASE_URL=https://api.openai.com/v1
-# CHROMA_PERSIST_DIR=./chroma_data
-# RAG_TOP_K=5
+# API
+API_KEY=your-random-api-key
+
+# LLM
+LLM_API_KEY=your-llm-api-key
+
+# (Optional) Xiaomi Mimo provider
+XIAOMI_API_KEY=your-xiaomi-api-key
+
+# (Optional) GitHub token for SWC sync rate limiting
+GITHUB_TOKEN=
 ```
 
-### 3. Launch
+### 3. Configure LLM Provider
+
+Edit `solidguard.json` — see [Configuration](#-configuration) for full details.
+
+**OpenAI / Compatible:**
+
+```json
+{
+  "providers": {
+    "default": {
+      "apiKey": "${LLM_API_KEY}",
+      "baseUrl": "https://api.openai.com/v1",
+      "api": "openai",
+      "defaultModel": "gpt-4o",
+      "models": [
+        {
+          "id": "gpt-4o",
+          "name": "GPT-4o",
+          "maxTokens": 4096,
+          "contextWindow": 128000
+        }
+      ]
+    }
+  }
+}
+```
+
+**Anthropic:**
+
+```json
+{
+  "providers": {
+    "default": {
+      "apiKey": "${LLM_API_KEY}",
+      "baseUrl": "https://api.anthropic.com",
+      "api": "anthropic-messages",
+      "defaultModel": "claude-sonnet-4-20250514",
+      "models": [
+        {
+          "id": "claude-sonnet-4-20250514",
+          "name": "Claude Sonnet 4",
+          "maxTokens": 4096,
+          "contextWindow": 200000
+        }
+      ]
+    }
+  }
+}
+```
+
+### 4. Launch
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-### 4. Access
+### 5. Access
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| **Frontend** | [http://localhost:3000](http://localhost:3000) | Web interface |
+| **Frontend** | [http://localhost:3000](http://localhost:3000) | Web UI |
 | **API** | [http://localhost:8000](http://localhost:8000) | REST API |
 | **API Docs** | [http://localhost:8000/docs](http://localhost:8000/docs) | Swagger UI |
+| **Health** | [http://localhost:8000/health](http://localhost:8000/health) | Service health check |
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
-### Environment Variables
+SolidGuard uses a **JSON configuration file** (`solidguard.json`) for application settings. Environment variables are only used for Docker infrastructure and sensitive values referenced via `${VAR}` syntax.
 
-| Variable | Required | Default | Description |
-|----------|:--------:|---------|-------------|
-| `DATABASE_URL` | ✅ | — | PostgreSQL connection: `postgresql+asyncpg://user:pass@host:5432/db` |
-| `REDIS_URL` | ✅ | — | Redis connection: `redis://host:6379/0` |
-| `APP_PORT` | — | `8000` | API server port |
-| `LLM_PROVIDER` | ✅ | `openai` | `openai` · `anthropic` · `local` |
-| `LLM_API_KEY` | ✅ | — | API key for LLM provider |
-| `LLM_MODEL_NAME` | ✅ | `gpt-4o` | Model identifier |
-| `LLM_BASE_URL` | — | `https://api.openai.com/v1` | LLM API base URL (for local/proxy) |
-| `EMBEDDING_PROVIDER` | ✅ | `openai` | `openai` · `local` (sentence-transformers) |
-| `EMBEDDING_API_KEY` | ✅ | — | API key for embedding provider |
-| `EMBEDDING_BASE_URL` | — | `https://api.openai.com/v1` | Embedding API base URL |
-| `CHROMA_PERSIST_DIR` | — | `./chroma_data` | Chroma vector DB storage path |
-| `RAG_TOP_K` | — | `5` | Number of similar vulnerabilities to retrieve |
+### Application Settings
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `app.apiKey` | string | — | API access key (supports `${API_KEY}`) |
+| `app.port` | number | `8000` | API server port |
+| `app.maxUploadSizeMb` | number | `50` | Max upload file size in MB |
+| `app.cleanupDays` | number | `30` | Days before auto-cleanup of old projects |
+| `app.logLevel` | string | `"INFO"` | Logging level |
+| `app.corsOrigins` | string | — | Comma-separated allowed CORS origins |
+| `app.rateLimit` | string | `"60/minute"` | Rate limit expression |
+| `app.tokenBudget` | number | `500000` | Max tokens per project for LLM audit |
+| `app.maxLLMCallsPerProject` | number | `100` | Max LLM API calls per project |
+
+### Database & Cache
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `database.url` | string | PostgreSQL connection string (supports `${VAR}`) |
+| `database.poolSize` | number | Connection pool size |
+| `database.maxOverflow` | number | Max overflow connections |
+| `redis.url` | string | Redis connection string (supports `${VAR}`) |
+
+### RAG Configuration
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `rag.chromaPersistDir` | string | `"./chroma_data"` | ChromaDB persistence directory |
+| `rag.topK` | number | `5` | Number of similar vulnerabilities to retrieve |
+
+### LLM Provider Configuration
+
+Each provider object supports:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `apiKey` | string | API key (supports `${ENV_VAR}`) |
+| `baseUrl` | string | API base URL |
+| `api` | string | `"openai"`, `"anthropic-messages"`, or `"local"` |
+| `defaultModel` | string | Default model ID |
+| `models` | array | Available models with `id`, `name`, `maxTokens`, `contextWindow` |
+
+The `embedding` provider supports `"local"` mode using `sentence-transformers` with `all-MiniLM-L6-v2` — no API key required.
+
+### Environment Variables (`.env`)
+
+| Variable | Required | Description |
+|----------|:--------:|-------------|
+| `POSTGRES_USER` | Yes | PostgreSQL user |
+| `POSTGRES_PASSWORD` | Yes | PostgreSQL password |
+| `POSTGRES_DB` | Yes | Database name |
+| `REDIS_PASSWORD` | Yes | Redis password |
+| `API_KEY` | Yes | API access key |
+| `LLM_API_KEY` | Yes | LLM provider API key |
+| `XIAOMI_API_KEY` | No | Xiaomi Mimo provider key |
+| `GITHUB_TOKEN` | No | GitHub token for SWC sync rate limiting |
+| `SOLIDGUARD_CONFIG` | No | Config file path (default: `./solidguard.json`) |
+| `VITE_API_BASE_URL` | No | Frontend API base path (default: `/api`) |
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ### System Overview
 
-```mermaid
-graph LR
-    subgraph Frontend["Frontend (React + AntD)"]
-        UI[":3000"]
-    end
-
-    subgraph Backend["API Gateway (FastAPI)"]
-        API[":8000"]
-    end
-
-    subgraph Workers["Celery Workers"]
-        W1[File Processing]
-        W2[Slither Analysis]
-        W3[Foundry Fuzzing]
-        W4[LLM Audit]
-        W5[Knowledge Sync]
-    end
-
-    subgraph Storage["Data Layer"]
-        PG[(PostgreSQL 15)]
-        RD[(Redis)]
-        CH[(Chroma)]
-        FS[File System]
-    end
-
-    subgraph External["External Services"]
-        LLM[LLM API]
-        SWC[SWC Registry]
-    end
-
-    UI --> API
-    API --> RD
-    API --> PG
-    RD --> Workers
-    Workers --> PG
-    Workers --> CH
-    Workers --> LLM
-    Workers --> SWC
-    Workers --> FS
 ```
-
-> 📐 Full architecture diagram: [`docs/architecture.svg.html`](docs/architecture.svg.html)
+┌─────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│  Frontend (SPA) │     │   API (FastAPI)  │     │ Worker (Celery)  │
+│   React + Vite  │     │   :8000          │     │                  │
+│   :3000         │     │                  │     │                  │
+│                 │     │  ┌────────────┐  │     │  ┌────────────┐  │
+│  nginx proxy ───┼─────┼─►│  Routes    │  │     │  │  Slither   │  │
+│  (injects key)  │     │  │  /api/v1/* │  │     │  │  Foundry   │  │
+│                 │     │  └─────┬──────┘  │     │  │  LLM Audit │  │
+└─────────────────┘     │        │         │     │  └────────────┘  │
+                        │  ┌─────▼──────┐  │     └────────┬─────────┘
+                        │  │  Services   │  │              │
+                        │  └─────┬──────┘  │              │
+                        └────────┼─────────┘              │
+                                 │                        │
+                   ┌─────────────┼────────────────────────┘
+                   │             │              │
+            ┌──────▼──────┐ ┌───▼────┐  ┌──────▼──────┐
+            │ PostgreSQL  │ │ Redis  │  │  ChromaDB   │
+            │   :5432     │ │ :6379  │  │  (vector)   │
+            └─────────────┘ └────────┘  └─────────────┘
+                                              │
+                                     ┌────────▼────────┐
+                                     │    LLM API      │
+                                     │ (OpenAI/Anthr…) │
+                                     └─────────────────┘
+```
 
 ### Docker Compose Services
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
-| `api` | python:3.11-slim | 8000 | FastAPI application |
-| `worker` | python:3.11-slim | — | Celery task workers |
+| `api` | python:3.11-slim | 8000 | FastAPI application server |
+| `worker` | python:3.11-slim | — | Celery task workers (Slither, Foundry, LLM) |
 | `postgres` | postgres:15 | 5432 | Primary database |
-| `redis` | redis:7 | 6379 | Celery broker & cache |
-| `frontend` | nginx:alpine | 3000 | React SPA + API proxy |
+| `redis` | redis:7 | 6379 | Celery broker, cache, rate limiter |
+| `frontend` | nginx:alpine | 3000 | React SPA + reverse proxy to API |
+| `nginx-proxy` | nginx:alpine | 80/443 | Optional HTTPS termination (profile: `https`) |
+
+### Key Design Decisions
+
+- **JSON config over env vars** — Application settings live in `solidguard.json`; env vars only for infrastructure secrets and `${VAR}` interpolation.
+- **Async everywhere** — FastAPI + SQLAlchemy async + HTTPX for non-blocking I/O.
+- **Celery for long tasks** — Slither, Foundry, and LLM audits run in background workers with SSE progress streaming.
+- **Provider abstraction** — Unified LLM client supporting OpenAI-compatible and Anthropic Messages APIs with automatic routing.
 
 ---
 
-## 🔄 Audit Pipeline
+## Audit Pipeline
 
-```mermaid
-graph TD
-    A["1️⃣ Upload Contracts"] -->|"POST /api/v1/projects"| B["2️⃣ Slither Static Analysis"]
-    B -->|"POST /projects/{id}/analyze"| C["3️⃣ Foundry Fuzz Testing"]
-    C -->|"POST /projects/{id}/fuzz"| D["4️⃣ LLM Deep Audit"]
-    D -->|"POST /projects/{id}/llm-audit"| E["5️⃣ Generate Report"]
-    E -->|"POST /projects/{id}/report"| F["📄 Download HTML/PDF/Word"]
-
-    subgraph RAG["RAG Enhancement"]
-        V[(SWC Registry)] -->|"Vector Search"| D
-        CH[(Chroma DB)] -->|"Top-K Matches"| D
-    end
-
-    RAG -.->|"Context Injection"| D
 ```
-
-> 📐 Pipeline diagram: [`docs/pipeline.svg.html`](docs/pipeline.svg.html)
+1. Upload Contracts          POST /api/v1/projects
+       │
+2. Slither Static Analysis   POST /projects/{id}/analyze
+       │
+3. Foundry Fuzz Testing      POST /projects/{id}/fuzz
+       │
+4. LLM Deep Audit            POST /projects/{id}/llm-audit
+       │                          │
+       │     RAG: ChromaDB ───────+  (SWC knowledge base)
+       │
+5. Generate Report           POST /projects/{id}/report
+       │
+6. Download HTML/PDF/Word    GET  /reports/{id}/download
+```
 
 ### How It Works
 
-1. **Upload** — User uploads `.sol` files, `.zip`, or `.tar.gz` archives
-2. **Slither** — Industry-standard static analysis detects known vulnerability patterns
-3. **Foundry** — Fuzz testing generates random inputs to find edge-case failures
-4. **LLM Audit** — AI analyzes key functions with RAG-enhanced context from the vulnerability knowledge base
-5. **Report** — All findings aggregated, polished by LLM, exported as HTML/PDF/Word
+1. **Upload** — Upload `.sol` files, `.zip`, or `.tar.gz` archives via API or web UI
+2. **Slither** — Industry-standard static analysis detects known vulnerability patterns (reentrancy, overflow, access control, etc.)
+3. **Foundry** — Fuzz testing generates random inputs to discover edge-case failures and invariant violations
+4. **LLM Audit** — AI analyzes high-risk functions with RAG-enhanced context from the vulnerability knowledge base
+5. **Report** — All findings aggregated, deduplicated, and exported as HTML/PDF/Word with severity coding
 
 ### RAG Strategy
 
-Instead of feeding entire contracts into the LLM context window:
-
 | Step | Action | Purpose |
 |------|--------|---------|
-| **1. Summary** | Compress contract to interface + state variables + signatures | Reduce context size |
-| **2. Extract** | Identify functions with external calls (transfer, call, delegatecall, etc.) | Focus on high-risk code |
-| **3. Retrieve** | Embed function code, query Chroma for top-K similar vulnerabilities | Inject known patterns |
-| **4. Audit** | LLM receives summary + function + similar vulns → generates findings | Enhanced analysis |
+| **1. Summarize** | Compress contract to interface + state variables + function signatures | Reduce context window usage |
+| **2. Extract** | Identify functions with external calls (`transfer`, `call`, `delegatecall`, etc.) | Focus on high-risk code paths |
+| **3. Retrieve** | Embed function code, query ChromaDB for top-K similar known vulnerabilities | Inject known attack patterns |
+| **4. Audit** | LLM receives summary + function body + similar vulnerabilities as context | Enhanced pattern recognition |
+
+### False Positive Handling
+
+Users mark individual Slither detections as false positive via the UI. Marked items are persisted in the database and automatically excluded from all subsequent analysis views and report generation.
 
 ---
 
-## 📡 API Reference
+## API Reference
 
 ### Projects
 
-```
-POST   /api/v1/projects                    Upload contracts (multipart/form-data)
-GET    /api/v1/projects/{id}/files         List project files
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/projects` | Upload contracts (multipart/form-data) |
+| `GET` | `/api/v1/projects` | List all projects |
+| `GET` | `/api/v1/projects/{id}` | Get project detail |
+| `GET` | `/api/v1/projects/{id}/files` | List project files |
 
 ### Analysis
 
-```
-POST   /api/v1/projects/{id}/analyze       Trigger Slither analysis
-GET    /api/v1/projects/{id}/analyses      Get Slither results (filtered by FP)
-POST   /api/v1/projects/{id}/fuzz          Trigger Foundry fuzzing
-GET    /api/v1/projects/{id}/fuzz-results  Get fuzzing results
-POST   /api/v1/projects/{id}/llm-audit     Trigger LLM audit
-GET    /api/v1/projects/{id}/llm-audit-results  Get LLM audit results
-```
-
-### False Positive Management
-
-```
-POST   /api/v1/detections/{id}/mark-false-positive   Mark detection as FP
-```
-
-### Knowledge Base
-
-```
-POST   /api/v1/knowledge/sync              Sync SWC Registry to database + Chroma
-GET    /api/v1/vulnerabilities             Search vulnerabilities (paginated)
-       ?search=overflow&page=1&page_size=20
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/projects/{id}/analyze` | Trigger Slither analysis |
+| `GET` | `/api/v1/projects/{id}/analyses` | Get Slither results |
+| `POST` | `/api/v1/projects/{id}/fuzz` | Trigger Foundry fuzz testing |
+| `GET` | `/api/v1/projects/{id}/fuzz-results` | Get fuzz results |
+| `POST` | `/api/v1/projects/{id}/llm-audit` | Trigger LLM deep audit |
+| `GET` | `/api/v1/projects/{id}/llm-audit-results` | Get LLM audit results |
 
 ### Reports
 
-```
-POST   /api/v1/projects/{id}/report        Generate report
-       Body: {"format": "html|pdf|word"}
-GET    /api/v1/projects/{id}/reports       List project reports
-GET    /api/v1/reports/{id}/download       Download report file
-       ?format=html|pdf|word
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/projects/{id}/report` | Generate audit report |
+| `GET` | `/api/v1/projects/{id}/reports` | List project reports |
+| `GET` | `/api/v1/reports/{id}/download` | Download report file |
+
+### Knowledge Base
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/knowledge/sync` | Sync SWC Registry to DB + ChromaDB |
+| `GET` | `/api/v1/vulnerabilities` | Search vulnerabilities (paginated) |
+
+### Real-time Events
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/projects/{id}/events` | SSE event stream for live updates |
 
 ### Health
 
-```
-GET    /health                             Returns {"status": "ok"}
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Returns `{"status": "ok"}` with Postgres/Redis checks |
 
-> 📖 Full interactive API docs available at `http://localhost:8000/docs` (Swagger UI)
-
----
-
-## 🚢 Deployment Guide
-
-### Production Configuration
-
-```bash
-# Create production environment
-cp .env.example .env.production
-
-# Set secure values (never commit these!)
-sed -i 's/LLM_API_KEY=.*/LLM_API_KEY=sk-your-production-key/' .env.production
-sed -i 's/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=your-secure-password/' .env.production
-
-# Launch with production config
-docker-compose --env-file .env.production up -d
-```
-
-### Service Architecture
-
-| Service | Internal Port | External Port | Scaling |
-|---------|:------------:|:-------------:|---------|
-| Frontend | 80 | 3000 | Horizontal (load balancer) |
-| API | 8000 | 8000 | Horizontal (load balancer) |
-| PostgreSQL | 5432 | 5432 | Read replicas |
-| Redis | 6379 | 6379 | Sentinel / Cluster |
-| Worker | — | — | Scale with queue depth |
-
-### Monitoring
-
-```bash
-# Check service health
-docker-compose ps
-
-# View worker logs
-docker-compose logs -f worker
-
-# Check API health
-curl http://localhost:8000/health
-```
+> Full interactive API documentation: **http://localhost:8000/docs** (Swagger UI)
 
 ---
 
-## 🛠️ Development Guide
+## Project Structure
 
-### Local Setup
+```
+SolidGuard/
+├── backend/
+│   ├── app/
+│   │   ├── api/                    # FastAPI route handlers
+│   │   │   ├── v1/                 # Versioned API endpoints (events, tasks)
+│   │   │   ├── analysis.py         # Slither analysis routes
+│   │   │   ├── detections.py       # Detection management routes
+│   │   │   ├── fuzz.py             # Fuzz testing routes
+│   │   │   ├── knowledge.py        # Knowledge base sync routes
+│   │   │   ├── llm_audit.py        # LLM audit routes
+│   │   │   ├── projects.py         # Project CRUD routes
+│   │   │   ├── reports.py          # Report generation routes
+│   │   │   ├── vulnerabilities.py  # Vulnerability search routes
+│   │   │   └── router.py           # API router aggregation
+│   │   ├── llm/                    # LLM module
+│   │   │   ├── budget/             # Token budget management
+│   │   │   ├── pipeline/           # LLM audit pipeline
+│   │   │   ├── prompts/            # Prompt templates
+│   │   │   ├── provider/           # Multi-provider routing
+│   │   │   ├── rag/                # RAG retrieval logic
+│   │   │   ├── schemas/            # LLM response schemas
+│   │   │   ├── security/           # Input sanitization
+│   │   │   └── config.py           # LLM config parser
+│   │   ├── models/                 # SQLAlchemy ORM models
+│   │   ├── schemas/                # Pydantic request/response schemas
+│   │   ├── services/               # Business logic engines
+│   │   │   ├── engine/             # Core engines (slither, fuzz, llm_audit)
+│   │   │   ├── infra/              # Infrastructure (storage)
+│   │   │   └── templates/          # Report templates
+│   │   ├── state/                  # Project state machine
+│   │   ├── tasks/                  # Celery task definitions
+│   │   ├── auth.py                 # API Key authentication
+│   │   ├── celery_app.py           # Celery application factory
+│   │   ├── config.py               # Settings from JSON config
+│   │   ├── database.py             # DB engine & session factory
+│   │   ├── dependencies.py         # FastAPI dependency injection
+│   │   └── main.py                 # FastAPI application entry
+│   ├── alembic/                    # Database migrations
+│   └── requirements.txt            # Python dependencies
+├── frontend/
+│   ├── src/
+│   │   ├── api/                    # API client & hooks
+│   │   ├── components/             # Shared components
+│   │   ├── design-system/          # Design system (Button, Table, Tag, etc.)
+│   │   ├── hooks/                  # Custom hooks (useSSE, useTaskProgress)
+│   │   ├── layouts/                # AppShell, Header
+│   │   ├── pages/                  # Page components
+│   │   ├── stores/                 # Zustand state stores
+│   │   ├── styles/                 # Global styles
+│   │   └── utils/                  # Utilities (format, severity)
+│   ├── Dockerfile                  # Multi-stage: node build → nginx serve
+│   ├── nginx.conf                  # Reverse proxy + SPA fallback
+│   └── package.json                # Node dependencies
+├── docs/                           # Project documentation
+│   ├── architecture/               # Architecture docs & audit reports
+│   ├── design/                     # Design specs & feature proposals
+│   ├── development/                # Development task specs
+│   └── sprints/                    # Sprint plans & execution logs
+├── tests/                          # Integration & security tests
+├── docker/                         # Docker build files
+│   ├── Dockerfile                  # Backend Docker image
+│   └── nginx-proxy.conf            # HTTPS proxy config
+├── docker-compose.yml              # Service orchestration
+├── solidguard.json                 # Application configuration
+├── solidguard.json.example         # Configuration template
+├── .env.example                    # Environment variable template
+└── .gitignore
+```
+
+---
+
+## Documentation
+
+All project documentation is organized under `docs/`:
+
+| Directory | Contents |
+|-----------|----------|
+| `docs/architecture/` | System architecture, master blueprint, architecture audit report |
+| `docs/sprints/` | Sprint plans (A–D) and execution logs |
+| `docs/design/` | Design specs, feature proposals, refactor plans |
+| `docs/development/` | Development task specs and prompts |
+
+### Key Documents
+
+| Document | Description |
+|----------|-------------|
+| [Master Blueprint](docs/architecture/master-blueprint.md) | Full architecture overview with 25 remediation items |
+| [Architecture Audit Report](docs/architecture/architecture-audit.md) | Security & quality audit findings (4 Critical / 6 High / 9 Medium / 6 Low) |
+| [LLM Call Chain Blueprint](docs/architecture/llm-call-chain-blueprint.md) | LLM module architecture design |
+| [Frontend Rewrite Plan](docs/design/frontend-rewrite-plan.md) | Frontend redesign rationale and specs |
+| [Sprint A–D Logs](docs/sprints/) | Sprint execution records and fix details |
+
+---
+
+## Development Guide
+
+### Local Setup (without Docker)
 
 ```bash
 # Backend
@@ -330,8 +520,11 @@ python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Start API (requires PostgreSQL + Redis running)
+# Start API (requires PostgreSQL + Redis running locally)
 uvicorn app.main:app --reload --port 8000
+
+# Start Celery worker
+celery -A app.celery_app worker -B --loglevel=info
 
 # Frontend
 cd frontend
@@ -339,136 +532,83 @@ npm install
 npm run dev                     # → http://localhost:5173
 ```
 
-### Running Tests
-
-```bash
-# Start all services
-docker-compose up -d
-
-# Run integration tests
-cd tests
-pip install -r requirements-test.txt
-pytest test_integration.py -v
-
-# Run with coverage
-pytest test_integration.py -v --tb=short
-```
-
 ### Database Migrations
 
 ```bash
+cd backend
+
 # Generate new migration
 alembic revision --autogenerate -m "description"
 
 # Apply migrations
 alembic upgrade head
 
-# Rollback
+# Rollback last migration
 alembic downgrade -1
 ```
 
-### Adding Custom Slither Detectors
+### HTTPS Deployment
 
-1. Create your detector class following [Slither docs](https://github.com/crytic/slither/wiki/Adding-a-new-detector)
-2. Mount the file into the worker container via `docker-compose.yml` volumes
-3. Update the Slither command in `backend/app/tasks/run_slither.py`
+Enable the optional nginx reverse proxy with TLS:
+
+```bash
+docker compose --profile https up -d
+```
+
+Configure certificates in `docker/nginx-proxy.conf`.
 
 ---
 
-## 📁 Project Structure
+## Testing
 
-```
-solidiguard/
-├── backend/
-│   ├── app/
-│   │   ├── api/                    # FastAPI route handlers
-│   │   │   ├── analysis.py         #   Slither analysis endpoints
-│   │   │   ├── detections.py       #   False positive endpoints
-│   │   │   ├── fuzz.py             #   Fuzzing endpoints
-│   │   │   ├── knowledge.py        #   Knowledge sync endpoint
-│   │   │   ├── llm_audit.py        #   LLM audit endpoints
-│   │   │   ├── projects.py         #   Project upload endpoints
-│   │   │   ├── reports.py          #   Report generation endpoints
-│   │   │   ├── vulnerabilities.py  #   Vulnerability DB query
-│   │   │   └── router.py           #   Router aggregation
-│   │   ├── services/               # Business logic
-│   │   │   ├── chroma_client.py    #   Chroma vector DB client
-│   │   │   ├── embedding.py        #   Embedding provider abstraction
-│   │   │   ├── llm_client.py       #   LLM provider abstraction
-│   │   │   ├── report_generator.py #   Report generation engine
-│   │   │   └── templates/          #   Jinja2 report templates
-│   │   ├── tasks/                  # Celery task definitions
-│   │   │   ├── generate_report.py  #   Report generation task
-│   │   │   ├── process_upload.py   #   File extraction task
-│   │   │   ├── run_fuzzer.py       #   Foundry fuzzing task
-│   │   │   ├── run_llm_audit.py    #   LLM audit task (RAG)
-│   │   │   └── sync_swc.py         #   SWC Registry sync task
-│   │   ├── models.py               # SQLAlchemy ORM models (8 tables)
-│   │   ├── database.py             # DB engine & session factory
-│   │   ├── celery_app.py           # Celery configuration
-│   │   ├── config.py               # Environment variable loading
-│   │   └── main.py                 # FastAPI application entry
-│   ├── alembic/                    # Database migrations (8 versions)
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── api/client.ts           # Axios HTTP client
-│   │   ├── pages/
-│   │   │   ├── UploadPage.tsx      # Contract upload (drag & drop)
-│   │   │   ├── ProjectDetailPage.tsx # Analysis dashboard + FP marking
-│   │   │   ├── ReportPage.tsx      # Report generation & download
-│   │   │   └── VulnerabilitiesPage.tsx # SWC vulnerability browser
-│   │   ├── App.tsx                 # Layout shell (Header + Nav)
-│   │   └── main.tsx                # React Router configuration
-│   ├── Dockerfile                  # Multi-stage: node → nginx
-│   └── nginx.conf                  # Reverse proxy + SPA fallback
-├── tests/
-│   ├── test_integration.py         # 18 integration test cases
-│   ├── conftest.py                 # pytest fixtures
-│   └── fixtures/                   # Test Solidity contracts
-├── docker-compose.yml              # 5-service orchestration
-├── .env.example                    # Environment variable template
-└── README.md
+```bash
+# Start all services
+docker compose up -d
+
+# Install test dependencies
+cd tests
+pip install -r requirements-test.txt
+
+# Run all tests
+pytest -v
+
+# Run specific test suites
+pytest test_integration.py -v    # Integration tests
+pytest test_security.py -v       # Security tests
+pytest test_engines.py -v        # Engine unit tests
+pytest test_services.py -v       # Service unit tests
+pytest test_api.py -v            # API endpoint tests
 ```
 
 ---
 
-## 🗄️ Database Schema
-
-| Table | Purpose | Sprint |
-|-------|---------|--------|
-| `projects` | Uploaded project metadata | 1 |
-| `project_files` | Individual file tracking | 1 |
-| `analysis_results` | Slither raw output storage | 2 |
-| `detections` | Individual Slither detections | 3 |
-| `false_positive_feedbacks` | User FP markings | 3 |
-| `vulnerability_entries` | SWC Registry knowledge base | 4 |
-| `fuzzing_results` | Foundry fuzz test output | 5 |
-| `llm_audit_results` | LLM audit findings | 6 |
-| `reports` | Generated report metadata | 7 |
-
----
-
-## ❓ FAQ
+## FAQ
 
 <details>
 <summary><strong>Which LLM providers are supported?</strong></summary>
 
-OpenAI, Anthropic, and any OpenAI-compatible local model (via `LLM_BASE_URL`). Set `LLM_PROVIDER` to `openai`, `anthropic`, or `local`.
+Any OpenAI-compatible API (OpenAI, Azure OpenAI, local models, Xiaomi Mimo, etc.) and the Anthropic Messages API. Set `"api": "openai"` or `"api": "anthropic-messages"` in `solidguard.json`. Multiple providers can be configured simultaneously.
 
 </details>
 
 <details>
 <summary><strong>Can I use a local embedding model?</strong></summary>
 
-Yes. Set `EMBEDDING_PROVIDER=local` to use `sentence-transformers` with `all-MiniLM-L6-v2`. No API key required.
+Yes. Set `"api": "local"` in the `embedding` provider config to use `sentence-transformers` with `all-MiniLM-L6-v2`. No API key required — runs entirely locally.
+
+</details>
+
+<details>
+<summary><strong>How does the SSE real-time progress work?</strong></summary>
+
+When a task is triggered (Slither, Fuzz, LLM Audit), the frontend opens an SSE connection to `/api/v1/projects/{id}/events`. The backend polls for state changes and pushes events when new results are available. The frontend automatically refreshes data and shows toast notifications.
 
 </details>
 
 <details>
 <summary><strong>How are false positives handled?</strong></summary>
 
-Users mark individual Slither detections as false positive via the UI. Marked items are automatically excluded from analysis result views and all subsequent report generation.
+Users mark individual Slither detections as false positive via the UI. Marked items are persisted in the database and automatically excluded from analysis result views and all subsequent report generation.
 
 </details>
 
@@ -480,49 +620,41 @@ Solidity 0.4.x through 0.8.x, managed automatically via Slither and `solc-select
 </details>
 
 <details>
-<summary><strong>Can I add custom Slither detectors?</strong></summary>
+<summary><strong>How does RAG improve the LLM audit?</strong></summary>
 
-Yes. Create a custom detector class per [Slither documentation](https://github.com/crytic/slither/wiki/Adding-a-new-detector), mount it into the worker container, and update the Slither command in `run_slither.py`.
+Before auditing each function, the system embeds the function code and queries ChromaDB for the top-K most similar known vulnerabilities from the SWC Registry. These are injected into the LLM prompt as context, enabling the model to recognize patterns it might otherwise miss.
 
 </details>
 
 <details>
-<summary><strong>How does RAG improve the LLM audit?</strong></summary>
+<summary><strong>How do I switch LLM providers?</strong></summary>
 
-Before auditing each function, the system embeds the function code and queries Chroma for the top-K most similar known vulnerabilities from the SWC Registry. These are injected into the LLM prompt as context, enabling the model to recognize patterns it might otherwise miss.
+Edit `solidguard.json` and update the `providers.default` section. Supported API types: `"openai"` (OpenAI-compatible), `"anthropic-messages"` (Anthropic), `"local"` (embedding only). Changes take effect on next task execution — no restart required.
 
 </details>
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit changes: `git commit -am 'Add my feature'`
-4. Push to branch: `git push origin feature/my-feature`
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-### Standards
-
-| Area | Standard |
-|------|----------|
-| Python | PEP 8, type hints required |
-| TypeScript | Strict mode, ESLint |
-| Tests | All API endpoints must have integration tests |
-| Database | Changes via Alembic migrations only |
-| Commits | Conventional commits (`feat:`, `fix:`, `docs:`) |
+Please ensure all tests pass before submitting a PR.
 
 ---
 
-## 📄 License
+## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
 
-**Built with** Python · FastAPI · Celery · PostgreSQL · Redis · Chroma · React · Ant Design · Slither · Foundry · Docker
+**Built with** Python · FastAPI · Celery · PostgreSQL · Redis · ChromaDB · React · TypeScript · Slither · Foundry · Docker
 
 </div>
