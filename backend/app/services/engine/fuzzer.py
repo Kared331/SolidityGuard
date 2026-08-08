@@ -6,7 +6,7 @@ from pathlib import Path
 
 from app.services.engine.base import BaseEngine
 
-logger = logging.getLogger("solidiguard.engine.fuzzer")
+logger = logging.getLogger("solidguard.engine.fuzzer")
 
 
 def _find_contract_info(project_dir: str) -> list[dict]:

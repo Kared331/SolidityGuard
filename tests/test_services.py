@@ -52,14 +52,20 @@ class TestCreateProjectWithFiles:
     async def test_create_project_rejects_bad_extension(
         self, mock_makedirs, mock_get_dir, mock_process, mock_db
     ):
+        """所有文件扩展名均不支持时，应删除项目并抛 422。"""
         from app.services.project_service import create_project_with_files
+        from fastapi import HTTPException
 
         mock_file = MagicMock()
         mock_file.filename = "malware.exe"
         mock_file.content_type = "application/octet-stream"
 
-        result = await create_project_with_files(mock_db, "Test", [mock_file])
-        mock_db.add.assert_called_once()
+        mock_db.refresh = AsyncMock(side_effect=lambda p: setattr(p, "id", 1))
+
+        with pytest.raises(HTTPException) as exc_info:
+            await create_project_with_files(mock_db, "Test", [mock_file])
+        assert exc_info.value.status_code == 422
+        assert "unsupported extension" in exc_info.value.detail
 
     @pytest.mark.asyncio
     @patch("app.services.project_service.process_upload")
@@ -68,29 +74,68 @@ class TestCreateProjectWithFiles:
     async def test_create_project_rejects_bad_mime(
         self, mock_makedirs, mock_get_dir, mock_process, mock_db
     ):
+        """所有文件 MIME 类型均不支持时，应删除项目并抛 422。"""
         from app.services.project_service import create_project_with_files
+        from fastapi import HTTPException
 
         mock_file = MagicMock()
         mock_file.filename = "Token.sol"
         mock_file.content_type = "application/javascript"
 
-        result = await create_project_with_files(mock_db, "Test", [mock_file])
-        mock_db.add.assert_called_once()
+        mock_db.refresh = AsyncMock(side_effect=lambda p: setattr(p, "id", 1))
+
+        with pytest.raises(HTTPException) as exc_info:
+            await create_project_with_files(mock_db, "Test", [mock_file])
+        assert exc_info.value.status_code == 422
+        assert "unsupported MIME type" in exc_info.value.detail
 
     @pytest.mark.asyncio
     @patch("app.services.project_service.process_upload")
     @patch("app.services.project_service.get_project_dir", return_value="/tmp/test_project")
     @patch("os.makedirs")
-    async def test_create_project_skips_no_filename(
+    async def test_create_project_rejects_no_filename(
         self, mock_makedirs, mock_get_dir, mock_process, mock_db
     ):
+        """所有文件均缺少 filename 时，应删除项目并抛 422。"""
         from app.services.project_service import create_project_with_files
+        from fastapi import HTTPException
 
         mock_file = MagicMock()
         mock_file.filename = None
 
-        result = await create_project_with_files(mock_db, "Test", [mock_file])
+        mock_db.refresh = AsyncMock(side_effect=lambda p: setattr(p, "id", 1))
+
+        with pytest.raises(HTTPException) as exc_info:
+            await create_project_with_files(mock_db, "Test", [mock_file])
+        assert exc_info.value.status_code == 422
+        assert "file missing filename" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    @patch("app.services.project_service.process_upload")
+    @patch("app.services.project_service.get_project_dir", return_value="/tmp/test_project")
+    @patch("builtins.open", MagicMock())
+    @patch("os.makedirs")
+    async def test_create_project_skips_bad_keeps_good(
+        self, mock_makedirs, mock_get_dir, mock_process, mock_db
+    ):
+        """混合上传时，跳过无效文件、保留有效文件，项目正常创建。"""
+        from app.services.project_service import create_project_with_files
+
+        bad_file = MagicMock()
+        bad_file.filename = "malware.exe"
+        bad_file.content_type = "application/octet-stream"
+
+        good_file = MagicMock()
+        good_file.filename = "Token.sol"
+        good_file.content_type = "text/plain"
+        good_file.read = AsyncMock(return_value=b"pragma solidity ^0.8.0;")
+
+        mock_db.refresh = AsyncMock(side_effect=lambda p: setattr(p, "id", 1))
+        mock_db.commit = AsyncMock()
+
+        result = await create_project_with_files(mock_db, "Test", [bad_file, good_file])
         mock_db.add.assert_called_once()
+        mock_process.delay.assert_called_once_with(1)
 
 
 class TestGetProjectFiles:

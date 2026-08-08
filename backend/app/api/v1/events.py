@@ -1,8 +1,13 @@
+"""SSE 事件推送端点。
+
+优先使用 Redis Pub/Sub 实时推送，Redis 不可用时降级为数据库轮询。
+"""
 import asyncio
 import json
-from typing import Optional
+import logging
+from typing import AsyncIterator
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select, func
 
@@ -10,49 +15,54 @@ from app.database import async_session
 from app.models import Project, AnalysisResult, FuzzingResult, LLMAuditResult, Report
 from app.config import settings
 
+logger = logging.getLogger("solidguard.api.events")
+
 router = APIRouter()
 
-# SSE polling config
-BASE_INTERVAL = 5.0  # Base polling interval in seconds (was 1s)
-MAX_INTERVAL = 30.0  # Max interval with backoff
-BACKOFF_MULTIPLIER = 1.5  # Multiply interval when no changes
+# 降级轮询配置
+POLL_BASE_INTERVAL = 5.0
+POLL_MAX_INTERVAL = 30.0
+POLL_BACKOFF_MULTIPLIER = 1.5
 
 
-def _sse_event(event_name: str, data: dict) -> str:
-    # Use unnamed events so browser EventSource.onmessage catches them.
-    # Event type is carried inside the JSON payload as "type".
-    return f"data: {json.dumps(data)}\n\n"
+def _sse_event(data: dict) -> str:
+    return f"data: {json.dumps(data, default=str)}\n\n"
 
 
 async def _get_counts(project_id: int) -> dict:
-    """Fetch all counts using independent subqueries to avoid cross-join inflation."""
+    """获取项目各维度计数（独立子查询，避免交叉膨胀）。"""
     async with async_session() as session:
-        detections_q = (
-            select(func.count(AnalysisResult.id))
-            .where(AnalysisResult.project_id == project_id)
-        )
-        detections = (await session.execute(detections_q)).scalar() or 0
+        detections = (
+            await session.execute(
+                select(func.count(AnalysisResult.id))
+                .where(AnalysisResult.project_id == project_id)
+            )
+        ).scalar() or 0
 
-        fuzz_q = (
-            select(func.count(FuzzingResult.id))
-            .where(FuzzingResult.project_id == project_id)
-        )
-        fuzz = (await session.execute(fuzz_q)).scalar() or 0
+        fuzz = (
+            await session.execute(
+                select(func.count(FuzzingResult.id))
+                .where(FuzzingResult.project_id == project_id)
+            )
+        ).scalar() or 0
 
-        audit_q = (
-            select(func.count(LLMAuditResult.id))
-            .where(LLMAuditResult.project_id == project_id)
-        )
-        audit = (await session.execute(audit_q)).scalar() or 0
+        audit = (
+            await session.execute(
+                select(func.count(LLMAuditResult.id))
+                .where(LLMAuditResult.project_id == project_id)
+            )
+        ).scalar() or 0
 
-        reports_q = (
-            select(func.count(Report.id))
-            .where(Report.project_id == project_id)
-        )
-        reports = (await session.execute(reports_q)).scalar() or 0
+        reports = (
+            await session.execute(
+                select(func.count(Report.id))
+                .where(Report.project_id == project_id)
+            )
+        ).scalar() or 0
 
         project = await session.get(Project, project_id)
         status = project.status if project else None
+
     return {
         "detections": detections,
         "fuzz_results": fuzz,
@@ -62,61 +72,53 @@ async def _get_counts(project_id: int) -> dict:
     }
 
 
-async def event_generator(project_id: int, disconnect_event: asyncio.Event):
-    """SSE event generator with adaptive polling interval."""
+async def _redis_event_stream(project_id: int, disconnect_event: asyncio.Event) -> AsyncIterator[str]:
+    """Redis Pub/Sub 实时事件流（主路径）。"""
+    from app.llm.pipeline.stream import get_audit_stream
+
+    stream = get_audit_stream()
+    async for event in stream.subscribe(project_id):
+        if disconnect_event.is_set():
+            break
+        yield _sse_event(event)
+
+
+async def _polling_event_stream(project_id: int, disconnect_event: asyncio.Event) -> AsyncIterator[str]:
+    """数据库轮询事件流（降级路径）。"""
     prev = await _get_counts(project_id)
-    interval = BASE_INTERVAL
+    interval = POLL_BASE_INTERVAL
+
     while not disconnect_event.is_set():
         try:
             await asyncio.wait_for(disconnect_event.wait(), timeout=interval)
-            break  # Client disconnected
+            break
         except asyncio.TimeoutError:
-            pass  # No disconnect, continue polling
+            pass
 
         curr = await _get_counts(project_id)
         changed = False
+
         if curr["status"] != prev["status"]:
             changed = True
-            yield _sse_event(
-                "status_change",
-                {"type": "status_change", "status": curr["status"], "project_id": project_id},
-            )
-        if curr["detections"] > prev["detections"]:
-            changed = True
-            yield _sse_event(
-                "new_detections",
-                {"type": "new_detections", "count": curr["detections"], "project_id": project_id},
-            )
-        if curr["fuzz_results"] > prev["fuzz_results"]:
-            changed = True
-            yield _sse_event(
-                "new_fuzz_results",
-                {"type": "new_fuzz_results", "count": curr["fuzz_results"], "project_id": project_id},
-            )
-        if curr["audit_results"] > prev["audit_results"]:
-            changed = True
-            yield _sse_event(
-                "new_audit_results",
-                {"type": "new_audit_results", "count": curr["audit_results"], "project_id": project_id},
-            )
-        if curr["reports"] > prev["reports"]:
-            changed = True
-            yield _sse_event(
-                "new_report",
-                {"type": "new_report", "count": curr["reports"], "project_id": project_id},
-            )
+            yield _sse_event({"type": "status_change", "status": curr["status"], "project_id": project_id})
 
-        # Adaptive backoff: increase interval when no changes, reset on change
-        if changed:
-            interval = BASE_INTERVAL
-        else:
-            interval = min(interval * BACKOFF_MULTIPLIER, MAX_INTERVAL)
+        for key, event_type in [
+            ("detections", "new_detections"),
+            ("fuzz_results", "new_fuzz_results"),
+            ("audit_results", "new_audit_results"),
+            ("reports", "new_report"),
+        ]:
+            if curr[key] > prev[key]:
+                changed = True
+                yield _sse_event({"type": event_type, "count": curr[key], "project_id": project_id})
+
+        interval = POLL_BASE_INTERVAL if changed else min(interval * POLL_BACKOFF_MULTIPLIER, POLL_MAX_INTERVAL)
         prev = curr
 
 
 @router.get("/projects/{project_id}/events")
 async def project_events(project_id: int):
-    # Auth handled by router-level verify_api_key dependency
+    """SSE 事件端点：优先 Redis Pub/Sub，降级为数据库轮询。"""
     async with async_session() as session:
         project = await session.get(Project, project_id)
         if not project:
@@ -127,8 +129,24 @@ async def project_events(project_id: int):
     async def on_disconnect():
         disconnect_event.set()
 
+    # 尝试 Redis Pub/Sub，失败则降级为轮询
+    use_redis = True
+    try:
+        from app.llm.pipeline.stream import get_audit_stream
+        stream = get_audit_stream()
+        if not await stream.health_check():
+            raise ConnectionError("Redis health check failed")
+    except Exception as e:
+        logger.warning("Redis unavailable, falling back to polling: %s", e)
+        use_redis = False
+
+    if use_redis:
+        generator = _redis_event_stream(project_id, disconnect_event)
+    else:
+        generator = _polling_event_stream(project_id, disconnect_event)
+
     return StreamingResponse(
-        event_generator(project_id, disconnect_event),
+        generator,
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

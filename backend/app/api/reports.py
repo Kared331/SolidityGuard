@@ -6,10 +6,15 @@ from app.dependencies import get_db
 from app.schemas.report import ReportCreateRequest, ReportTriggerResponse, ReportListItemResponse
 from app.services.report_service import trigger_report, list_reports, get_report_download_info
 
-router = APIRouter()
+router = APIRouter(tags=["Reports"])
 
 
-@router.post("/projects/{project_id}/report", response_model=ReportTriggerResponse)
+@router.post(
+    "/projects/{project_id}/report",
+    response_model=ReportTriggerResponse,
+    summary="生成报告",
+    description="触发指定项目的审计报告生成任务，支持 HTML、PDF、DOCX 格式。",
+)
 async def create_report(
     project_id: int,
     body: ReportCreateRequest,
@@ -24,7 +29,12 @@ async def create_report(
     )
 
 
-@router.get("/projects/{project_id}/reports", response_model=list[ReportListItemResponse])
+@router.get(
+    "/projects/{project_id}/reports",
+    response_model=list[ReportListItemResponse],
+    summary="获取报告列表",
+    description="返回指定项目的所有已生成报告。",
+)
 async def list_project_reports(project_id: int, db: AsyncSession = Depends(get_db)):
     reports = await list_reports(db, project_id)
     return [
@@ -38,7 +48,11 @@ async def list_project_reports(project_id: int, db: AsyncSession = Depends(get_d
     ]
 
 
-@router.get("/reports/{report_id}/download")
+@router.get(
+    "/reports/{report_id}/download",
+    summary="下载报告",
+    description="下载指定报告文件，支持 html/pdf/docx 格式。",
+)
 async def download_report(report_id: int, format: str = "html", db: AsyncSession = Depends(get_db)):
     file_path, media_type, filename = await get_report_download_info(db, report_id, format)
     return FileResponse(path=file_path, media_type=media_type, filename=filename)

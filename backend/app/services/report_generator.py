@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 
 from app.models import Detection, FalsePositiveFeedback, FuzzingResult, LLMAuditResult
 from app.services.infra.storage import get_report_dir
-from app.services.llm_client import chat_completion
+from app.llm.sync_wrapper import chat_completion
 
-logger = logging.getLogger("solidiguard.services.report_generator")
+logger = logging.getLogger("solidguard.services.report_generator")
 
 
 def aggregate_findings(project_id: int, session: Session) -> dict:
@@ -213,7 +213,7 @@ def generate_pdf(html_path: str) -> str:
     return pdf_path
 
 
-def generate_word(findings: dict, title: str) -> str:
+def generate_word(findings: dict, title: str, project_id: int) -> str:
     from docx import Document
     from docx.shared import Pt, Inches
 
@@ -257,7 +257,6 @@ def generate_word(findings: dict, title: str) -> str:
                     run.bold = True
                     p.add_run(str(value))
 
-    project_id = findings.get("_project_id", 0)
     docx_path = os.path.join(get_report_dir(project_id), "report.docx")
     os.makedirs(os.path.dirname(docx_path), exist_ok=True)
     doc.save(docx_path)

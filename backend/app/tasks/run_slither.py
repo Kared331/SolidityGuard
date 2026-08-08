@@ -6,7 +6,7 @@ from app.models import AnalysisResult, Detection
 from app.services.engine.slither import SlitherEngine
 from app.services.infra.storage import get_project_dir
 
-logger = logging.getLogger("solidiguard.tasks.run_slither")
+logger = logging.getLogger("solidguard.tasks.run_slither")
 
 
 @celery.task(name="run_slither", bind=True)

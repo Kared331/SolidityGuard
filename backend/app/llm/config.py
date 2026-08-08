@@ -15,7 +15,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
-logger = logging.getLogger("solidiguard.config")
+logger = logging.getLogger("solidguard.config")
 
 _ENV_VAR_PATTERN = re.compile(r"\$\{([^}]+)\}")
 
@@ -170,17 +170,38 @@ def load_config(path: Optional[str] = None) -> SolidGuardConfig:
 
 
 _config_instance: Optional[SolidGuardConfig] = None
+_config_mtime: float = 0.0
 
 
 def get_config(path: Optional[str] = None) -> SolidGuardConfig:
-    """获取配置单例，首次调用时加载。"""
-    global _config_instance
-    if _config_instance is None:
+    """获取配置单例，支持基于文件 mtime 的热加载。
+
+    文件修改后下次调用自动重新加载，改完 solidguard.json 保存即生效，
+    无需重启服务。切换 provider / 改 model / 调 tokenBudget 都是即时的。
+    """
+    global _config_instance, _config_mtime
+
+    if path is None:
+        path = os.environ.get("SOLIDGUARD_CONFIG", "./solidguard.json")
+
+    try:
+        current_mtime = os.path.getmtime(path)
+    except OSError:
+        # 文件不存在时回退到缓存或抛错
+        if _config_instance is not None:
+            return _config_instance
+        return load_config(path)
+
+    if _config_instance is None or current_mtime != _config_mtime:
         _config_instance = load_config(path)
+        _config_mtime = current_mtime
+        logger.info("配置已加载: %s (mtime=%d)", path, int(current_mtime))
+
     return _config_instance
 
 
 def reset_config() -> None:
     """重置配置单例（用于测试）。"""
-    global _config_instance
+    global _config_instance, _config_mtime
     _config_instance = None
+    _config_mtime = 0.0

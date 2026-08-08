@@ -6,10 +6,15 @@ from app.dependencies import get_db
 from app.schemas.knowledge import VulnerabilityPaginatedResponse, VulnerabilityItemResponse
 from app.services.knowledge_service import search_vulnerabilities
 
-router = APIRouter()
+router = APIRouter(tags=["Vulnerabilities"])
 
 
-@router.get("/vulnerabilities", response_model=VulnerabilityPaginatedResponse)
+@router.get(
+    "/vulnerabilities",
+    response_model=VulnerabilityPaginatedResponse,
+    summary="搜索漏洞知识库",
+    description="分页搜索 SWC 漏洞知识库，支持关键词过滤。",
+)
 async def list_vulnerabilities(
     search: Optional[str] = Query(None),
     page: int = Query(1, ge=1),

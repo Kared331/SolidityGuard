@@ -10,7 +10,7 @@ from app.services.chroma_client import get_vulnerability_collection
 from app.services.embedding import get_embedding
 from app.services.engine.swc_sync import SWCSyncEngine
 
-logger = logging.getLogger("solidiguard.tasks.sync_swc")
+logger = logging.getLogger("solidguard.tasks.sync_swc")
 
 
 @shared_task(name="app.tasks.sync_swc.sync_swc", bind=True)

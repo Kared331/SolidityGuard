@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 # Pre-mock problematic modules that fail on Python 3.9 or lack DB drivers
 for mod_name in [
     "chromadb", "app.services.chroma_client",
-    "app.services.embedding", "app.services.llm_client",
+    "app.services.embedding", "app.llm.sync_wrapper",
     "psycopg2",
 ]:
     if mod_name not in sys.modules:

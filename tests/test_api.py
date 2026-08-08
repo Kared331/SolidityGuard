@@ -193,8 +193,9 @@ class TestProjectFiles:
 class TestAnalysisTrigger:
     """Tests for POST /api/v1/projects/{id}/analyze."""
 
-    @patch("app.services.analysis_service.build_analysis_pipeline")
-    def test_trigger_analysis_on_ready_project(self, mock_pipeline, app_client):
+    def test_trigger_analysis_on_ready_project(self, app_client):
+        from app.services.task_dispatcher import set_task_dispatcher, reset_task_dispatcher
+
         client, mock_db = app_client
 
         project = MagicMock()
@@ -202,17 +203,20 @@ class TestAnalysisTrigger:
         project.status = "ready"
         mock_db.get = AsyncMock(return_value=project)
 
-        mock_task = MagicMock()
-        mock_task.id = "task-123"
-        mock_chain = MagicMock()
-        mock_chain.apply_async.return_value = mock_task
-        mock_pipeline.return_value = mock_chain
+        # 注入 mock dispatcher，替代旧的 patch build_analysis_pipeline
+        mock_dispatcher = MagicMock()
+        mock_dispatcher.dispatch_analysis.return_value = "task-123"
+        set_task_dispatcher(mock_dispatcher)
 
-        resp = client.post("/api/v1/projects/1/analyze")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["status"] == "started"
-        assert data["task_id"] == "task-123"
+        try:
+            resp = client.post("/api/v1/projects/1/analyze")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "started"
+            assert data["task_id"] == "task-123"
+            mock_dispatcher.dispatch_analysis.assert_called_once_with(1)
+        finally:
+            reset_task_dispatcher()
 
     def test_trigger_analysis_on_non_ready_project(self, app_client):
         client, mock_db = app_client

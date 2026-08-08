@@ -112,8 +112,8 @@ _embedding_mock.get_embedding = MagicMock(return_value=[0.1] * 384)
 sys.modules.setdefault("app.services.embedding", _embedding_mock)
 
 _llm_client_mock = MagicMock()
-_llm_client_mock.chat_completion = MagicMock(return_value="[]")
-sys.modules.setdefault("app.services.llm_client", _llm_client_mock)
+_llm_client_mock.chat_completion = MagicMock(return_value=("[]", {"total_tokens": 100}))
+sys.modules.setdefault("app.llm.sync_wrapper", _llm_client_mock)
 
 _chroma_client_mock = MagicMock()
 _chroma_client_mock.get_vulnerability_collection = MagicMock()

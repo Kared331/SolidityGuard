@@ -8,7 +8,7 @@ from app.database import get_sync_session
 from app.models import Report
 from app.services.engine.report import ReportEngine
 
-logger = logging.getLogger("solidiguard.tasks.generate_report")
+logger = logging.getLogger("solidguard.tasks.generate_report")
 
 
 @celery.task(name="generate_report", bind=True)

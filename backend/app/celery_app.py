@@ -5,7 +5,7 @@ from celery.schedules import crontab
 
 from app.config import settings
 
-celery = Celery("solidiguard", broker=settings.REDIS_URL, backend=settings.REDIS_URL)
+celery = Celery("solidguard", broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 
 celery.conf.update(
     task_serializer="json",

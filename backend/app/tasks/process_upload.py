@@ -7,7 +7,7 @@ from app.services.engine.upload import UploadEngine
 from app.services.infra.storage import get_project_dir
 from app.state.project_state import ProjectStatus, validate_transition
 
-logger = logging.getLogger("solidiguard.tasks.process_upload")
+logger = logging.getLogger("solidguard.tasks.process_upload")
 
 
 @celery.task(name="process_upload", bind=True)

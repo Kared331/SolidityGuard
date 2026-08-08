@@ -24,7 +24,7 @@ from app.models import (
 )
 from app.services.infra.storage import REPORT_DIR, UPLOAD_DIR
 
-logger = logging.getLogger("solidiguard.tasks.cleanup")
+logger = logging.getLogger("solidguard.tasks.cleanup")
 
 
 def _dir_age_days(path: str) -> float:

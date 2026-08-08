@@ -201,14 +201,13 @@ class TestZipSlipAttackPrevention:
         engine = UploadEngine()
         result = engine.execute(project_id=1, project_dir=str(tmp_path))
 
+        # Zip Slip 防护应确保恶意文件未被提取到项目目录外
         escaped_file = tmp_path.parent.parent / "pwned.txt"
-        assert not escaped_file.exists() or True
+        assert not escaped_file.exists(), "Zip Slip: 恶意文件被提取到项目目录外"
 
-        evil_in_project = tmp_path / ".." / ".." / "pwned.txt"
-        assert not evil_in_project.resolve().exists() or \
-               not str(evil_in_project.resolve()).startswith(str(tmp_path.resolve()))
-
-        assert result["count"] >= 0
+        # 安全文件应被正常提取
+        assert result["count"] == 1
+        assert any("safe.sol" in f for f in result["sol_files"])
 
     def test_nested_dot_dot_blocked(self, tmp_path):
         """Deeply nested path traversal attempts are blocked."""

@@ -26,7 +26,8 @@ class InputSanitizer:
     MAX_CODE_LENGTH = 32000  # characters
 
     @staticmethod
-    def sanitize_code(code: str) -> str:
+    def sanitize_code(code: str) -> tuple[str, bool]:
+        """Sanitize code and detect injection. Returns (cleaned_code, injection_detected)."""
         # Remove null bytes and non-printable chars (except newlines)
         sanitized = code.replace("\x00", "")
         sanitized = re.sub(r"[^\x20-\x7E\n\t\r]", "", sanitized)
@@ -35,7 +36,9 @@ class InputSanitizer:
         if len(sanitized) > InputSanitizer.MAX_CODE_LENGTH:
             sanitized = sanitized[:InputSanitizer.MAX_CODE_LENGTH] + "\n// ... (truncated)"
 
-        return sanitized
+        # Detect injection
+        injection_detected = bool(InputSanitizer.detect_injection(sanitized))
+        return sanitized, injection_detected
 
     @staticmethod
     def detect_injection(text: str) -> list[str]:
@@ -49,7 +52,7 @@ class InputSanitizer:
     @staticmethod
     def sanitize(text: str) -> tuple[str, list[str]]:
         """Full sanitization: clean code + detect injection. Returns (cleaned, warnings)."""
-        cleaned = InputSanitizer.sanitize_code(text)
+        cleaned, _ = InputSanitizer.sanitize_code(text)
         warnings = InputSanitizer.detect_injection(cleaned)
         return cleaned, warnings
 

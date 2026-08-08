@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .template_loader import template_loader, PromptTemplate
 
 

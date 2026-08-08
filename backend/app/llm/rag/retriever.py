@@ -1,5 +1,11 @@
 """
 ChromaDB retriever for vulnerability pattern lookups.
+
+备选实现：本模块提供带 relevance 标签（HIGH/MEDIUM/LOW）的 format_rag_context，
+比 services/chroma_client 的 query_vulnerabilities 更丰富。当前生产路径使用
+chroma_client，本模块保留作为 RAG 上下文格式化的演进储备。
+
+技术冗余：不删除，待后续 RAG 增强时迁移到此实现。
 """
 from typing import Optional
 import chromadb

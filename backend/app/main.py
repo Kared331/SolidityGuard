@@ -15,7 +15,7 @@ from app.api.router import api_router
 from app.config import settings
 from app.database import async_engine, async_session
 
-logger = logging.getLogger("solidiguard")
+logger = logging.getLogger("solidguard")
 
 # Rate limiting (Fix #11)
 limiter = Limiter(

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AnalysisResult, Detection, FalsePositiveFeedback, Project
 from app.state.project_state import ProjectStatus
-from app.tasks.pipeline import build_analysis_pipeline
+from app.services.task_dispatcher import get_task_dispatcher
 
 from fastapi import HTTPException
 
@@ -16,8 +16,9 @@ async def trigger_analysis(db: AsyncSession, project_id: int) -> str:
         raise HTTPException(status_code=404, detail="Project not found")
     if project.status != ProjectStatus.READY.value:
         raise HTTPException(status_code=409, detail=f"Project is '{project.status}', not ready for analysis")
-    result = build_analysis_pipeline(project_id).apply_async()
-    return result.id
+    # 通过 TaskDispatcher 接口触发任务，Service 层不直接依赖 app.tasks.*
+    dispatcher = get_task_dispatcher()
+    return dispatcher.dispatch_analysis(project_id)
 
 
 async def list_analyses_filtered(db: AsyncSession, project_id: int) -> list[Detection]:

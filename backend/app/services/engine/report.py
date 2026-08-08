@@ -27,8 +27,7 @@ class ReportEngine(BaseEngine):
             file_paths["html"] = html_path
             file_paths["pdf"] = pdf_path
         elif output_format == "word":
-            polished_findings["_project_id"] = project_id
-            docx_path = generate_word(polished_findings, title)
+            docx_path = generate_word(polished_findings, title, project_id)
             file_paths["word"] = docx_path
 
         report_content = {

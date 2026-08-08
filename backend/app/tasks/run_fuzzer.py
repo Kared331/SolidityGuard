@@ -8,7 +8,7 @@ from app.models import FuzzingResult
 from app.services.engine.fuzzer import FuzzerEngine
 from app.services.infra.storage import get_project_dir
 
-logger = logging.getLogger("solidiguard.tasks.run_fuzzer")
+logger = logging.getLogger("solidguard.tasks.run_fuzzer")
 
 
 @celery.task(name="run_fuzzer", bind=True)
