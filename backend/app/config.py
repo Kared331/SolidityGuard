@@ -1,3 +1,4 @@
+import os
 import sys
 import logging
 from functools import lru_cache
@@ -12,7 +13,40 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
     stream=sys.stdout,
 )
-logger = logging.getLogger("solidiguard")
+logger = logging.getLogger("solidguard")
+
+
+def _build_database_url() -> str:
+    """从 POSTGRES_* 环境变量构建 DATABASE_URL。
+
+    优先级：DATABASE_URL 环境变量 > POSTGRES_* 组件构建 > 默认值。
+    docker-compose 通过 POSTGRES_HOST=postgres 覆盖 localhost，
+    无需在 .env 里写死完整连接串。
+    """
+    explicit = os.environ.get("DATABASE_URL")
+    if explicit:
+        return explicit
+    user = os.environ.get("POSTGRES_USER", "solidguard")
+    password = os.environ.get("POSTGRES_PASSWORD", "changeme")
+    db = os.environ.get("POSTGRES_DB", "solidguard")
+    host = os.environ.get("POSTGRES_HOST", "localhost")
+    port = os.environ.get("POSTGRES_PORT", "5432")
+    return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db}"
+
+
+def _build_redis_url() -> str:
+    """从 REDIS_* 环境变量构建 REDIS_URL。
+
+    优先级：REDIS_URL 环境变量 > REDIS_* 组件构建 > 默认值。
+    """
+    explicit = os.environ.get("REDIS_URL")
+    if explicit:
+        return explicit
+    password = os.environ.get("REDIS_PASSWORD", "")
+    host = os.environ.get("REDIS_HOST", "localhost")
+    port = os.environ.get("REDIS_PORT", "6379")
+    auth = f":{password}@" if password else ""
+    return f"redis://{auth}{host}:{port}/0"
 
 
 class Settings:
@@ -32,14 +66,14 @@ class Settings:
         self.TOKEN_BUDGET_PER_PROJECT: int = config.app.tokenBudget
         self.MAX_LLM_CALLS_PER_PROJECT: int = config.app.maxLLMCallsPerProject
 
-        # database
-        self.DATABASE_URL: str = config.database.url
+        # database — 从 POSTGRES_* 组件构建，json 中的 url 留空即可
+        self.DATABASE_URL: str = config.database.url or _build_database_url()
         self.DB_POOL_SIZE: int = config.database.poolSize
         self.DB_MAX_OVERFLOW: int = config.database.maxOverflow
         self.DB_POOL_RECYCLE: int = config.database.poolRecycle
 
-        # redis
-        self.REDIS_URL: str = config.redis.url
+        # redis — 从 REDIS_* 组件构建，json 中的 url 留空即可
+        self.REDIS_URL: str = config.redis.url or _build_redis_url()
 
         # rag
         self.CHROMA_PERSIST_DIR: str = config.rag.chromaPersistDir

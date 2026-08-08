@@ -6,20 +6,20 @@
     "cleanupDays": 30,
     "logLevel": "INFO",
     "corsOrigins": "http://localhost:3000,http://localhost:5173",
-    "rateLimit": "60/minute",
+    "rateLimit": "120/minute",
     "uploadDir": "uploads",
     "reportDir": "reports",
     "tokenBudget": 500000,
     "maxLLMCallsPerProject": 100
   },
   "database": {
-    "url": "${DATABASE_URL}",
+    "url": "",
     "poolSize": 10,
     "maxOverflow": 20,
     "poolRecycle": 3600
   },
   "redis": {
-    "url": "${REDIS_URL}"
+    "url": ""
   },
   "rag": {
     "chromaPersistDir": "./chroma_data",

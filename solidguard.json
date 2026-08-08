@@ -13,13 +13,13 @@
     "maxLLMCallsPerProject": 100
   },
   "database": {
-    "url": "${DATABASE_URL}",
+    "url": "",
     "poolSize": 10,
     "maxOverflow": 20,
     "poolRecycle": 3600
   },
   "redis": {
-    "url": "${REDIS_URL}"
+    "url": ""
   },
   "rag": {
     "chromaPersistDir": "./chroma_data",
@@ -28,15 +28,15 @@
   "providers": {
     "default": {
       "apiKey": "${LLM_API_KEY}",
-      "baseUrl": "",
+      "baseUrl": "https://api.openai.com/v1",
       "api": "openai",
-      "defaultModel": "",
+      "defaultModel": "gpt-4o",
       "models": [
         {
-          "id": "",
-          "name": "",
-          "maxTokens": 320,
-          "contextWindow": 1048576
+          "id": "gpt-4o",
+          "name": "GPT-4o",
+          "maxTokens": 4096,
+          "contextWindow": 128000
         }
       ]
     },

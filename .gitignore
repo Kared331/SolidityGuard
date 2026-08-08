@@ -63,3 +63,11 @@ certs/
 # ─── OS ─────────────────────────────────────────────────────────
 .DS_Store
 Desktop.ini
+
+# ─── IDE / Agent tools ──────────────────────────────────────────
+.trae/
+.reasonix/
+.brooks-lint-history.json
+
+# ─── Local config duplicates ────────────────────────────────────
+backend/solidguard.json
