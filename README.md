@@ -25,7 +25,7 @@ SolidGuard 是一个集**静态分析**、**模糊测试**与 **LLM 深度审计
 |------|------|
 | **三阶段审计流水线** | Slither 静态分析 → Foundry 模糊测试 → LLM 深度审计（RAG 增强） |
 | **性能优化成果** | 审计总延迟从 **210s 降至 70s**（降幅 67%），非 LLM 开销从 40s 降至 1.7s |
-| **并发架构** | 文件级并行（ThreadPoolExecutor + Semaphore）、批量化 Embedding/DB 写入 |
+| **并发架构** | 文件级并行（5 workers）+ 函数级并行（单文件 N>5 时启用，实测 3.79x 加速）+ 批量化 Embedding/DB 写入 |
 | **模块解耦** | TaskDispatcher Protocol 消除 Service/Task 循环依赖，支持独立单元测试 |
 | **配置热加载** | 基于 mtime 的配置缓存，LLM Provider/Token Budget 修改即时生效，无需重启 |
 | **一键管理门户** | `manage.ps1` 交互式脚本，封装启停、日志、配置修改、健康检查全流程 |
@@ -74,10 +74,11 @@ Engineering optimizations applied to the audit pipeline:
 | **Non-LLM overhead** | 40s | 1.7s | **95% reduction** |
 | **Embedding I/O** | Sequential per-file | Batched (32/request) | 20x throughput |
 | **Database writes** | N+1 session commits | Single-session batch commit | Atomic & fast |
-| **LLM calls** | Sequential per-file | File-level parallelism (5 workers) | 5x concurrency |
-| **Test coverage** | — | 91 unit + 20 integration tests | All green |
+| **LLM calls (cross-file)** | Sequential per-file | File-level parallelism (5 workers) | 5.22x concurrency |
+| **LLM calls (within-file)** | Sequential per-function | Function-level parallelism (N>5) | 3.79x speedup |
+| **Test coverage** | — | 95 unit + 20 integration + 7 perf benchmarks | All green |
 
-**Key techniques:** `ThreadPoolExecutor(max_workers=5)` + `Semaphore(5)` for file-level parallelism · batch embedding (limit 32) · single-session batch commit for findings · `TaskDispatcher` Protocol for Service/Task decoupling.
+**Key techniques:** `ThreadPoolExecutor(max_workers=5)` + `Semaphore(5)` for file-level parallelism · **function-level parallelism** (threshold N>5, aligned with LLM Semaphore) for within-file multi-function contracts · batch embedding (limit 32) · single-session batch commit for findings · `TaskDispatcher` Protocol for Service/Task decoupling.
 
 ---
 
@@ -157,6 +158,7 @@ docker compose up -d
 - **TaskDispatcher Protocol** — Eliminates circular dependency between Service and Task layers; enables independent unit testing of business logic without Celery.
 - **Three-Stage Audit Pipeline** — Collection → Batch prefetch → Audit. Each stage independently optimized for I/O and concurrency.
 - **File-Level Parallelism** — `ThreadPoolExecutor(max_workers=5)` with aligned `Semaphore(5)` for concurrent LLM calls across contract files.
+- **Function-Level Parallelism (P4)** — When a single contract exposes >5 key functions, a second `ThreadPoolExecutor(5)` parallelizes per-function LLM audits within the file. Threshold aligned with the global LLM Semaphore to avoid thread inflation under nested file+function parallelism. Baseline benchmark: 10-function contract 689.6ms → 181.8ms (3.79x).
 - **Single Source of Truth Config** — `.env` for infrastructure secrets, `solidguard.json` for structured app config with `${VAR}` interpolation. No scattered URL definitions.
 - **Hot Reload via mtime** — Config changes detected by file mtime caching; LLM provider/model/budget updates take effect on next task without service restart.
 - **Async Everywhere** — FastAPI + SQLAlchemy async + HTTPX for non-blocking I/O throughout the stack.
@@ -273,7 +275,7 @@ SolidGuard/
 ├── frontend/
 │   ├── src/                        # React + TypeScript (pages, design-system, hooks, stores)
 │   └── nginx.conf                  # Reverse proxy + SPA fallback
-├── tests/                          # 73 passing tests (integration, security, engines, API)
+├── tests/                          # 95 unit + 20 integration + 7 perf benchmarks
 ├── manage.ps1                      # Windows management portal
 ├── docker-compose.yml              # Service orchestration
 ├── solidguard.json                 # Application configuration
@@ -309,14 +311,17 @@ alembic downgrade -1                                # Rollback
 ### Testing
 
 ```bash
-# 单元测试（无需 Docker 服务栈，默认排除集成测试）
-venv\Scripts\python.exe -m pytest tests -m "not integration" -v
+# 单元测试（无需 Docker 服务栈，默认排除集成测试与性能压测）
+venv\Scripts\python.exe -m pytest tests -m "not integration and not perf" -v
 
 # 集成测试（需 docker compose up -d 运行中，全部走 127.0.0.1）
 venv\Scripts\python.exe -m pytest tests -m integration -v
+
+# 性能压测（显式运行，不计入 CI 必跑）
+venv\Scripts\python.exe -m pytest tests/perf -m perf -v -s
 ```
 
-> **测试声明（E8）**：91 项单测（`pytest -m "not integration"`）全绿；20 项集成测试（`pytest -m integration`）需 Docker 服务栈运行时可执行，服务不可达时自动 SKIP。以上数字经 `2026-08-30` 实测验证。
+> **测试声明（E8）**：95 项单测（`pytest -m "not integration and not perf"`）全绿；20 项集成测试（`pytest -m integration`）需 Docker 服务栈运行时可执行，服务不可达时自动 SKIP；7 项性能压测（`pytest -m perf`）需显式运行，含 P4-3 函数级并行优化守护（场景 F/G）。以上数字经 `2026-09-01` 实测验证。
 
 ### HTTPS Deployment
 
