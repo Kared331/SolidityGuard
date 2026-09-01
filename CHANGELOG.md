@@ -6,9 +6,9 @@ SolidGuard 项目更新说明。
 
 ---
 
-## [Unreleased] — 2026-06-05 ~ 2026-07-21
+## [Unreleased] — 2026-06-05 ~ 2026-09-01
 
-> 从初始提交到当前工作区的全部变更。涵盖架构重构、安全修复、功能新增、前端重写、测试扩展。
+> 从初始提交到当前工作区的全部变更。涵盖架构重构、安全修复、功能新增、前端重写、测试扩展、企业级稳定性打磨（P0/P1/P2）、性能压测与优化（P4）。
 
 ---
 
@@ -171,6 +171,97 @@ SolidGuard 项目更新说明。
 - **Sprint A–D 执行日志** — `docs/sprints/`（含修复清单与详细改动）
 - **Sprint 1–3 设计文档** — LLM 稳定性 / Embedding 重构 / 前端重设计
 - **README.md** — 全面重写，反映当前项目实际状态
+
+---
+
+### 🔵 企业级稳定性与运维打磨（Phase 1-3 — P0/P1/P2，2026-08-28 ~ 2026-09-01）
+
+> 依据 `MODIFICATION_BLUEPRINT.md` 蓝图，从「核心链路可用」推进到「企业级本地工具」标准。3 阶段共 25 项交付，commit `9a3112c`。
+
+#### P0 阻塞修复（阶段一，6/6 完成）
+
+| 编号 | 名称 | 关键文件 |
+|------|------|----------|
+| P0-1 | 激活集成测试套件（fixture 补齐） | `tests/test_integration.py`、`pytest.ini` |
+| P0-2 | LLM Provider 重试机制（tenacity，429/5xx 重试，401 不重试） | `llm/provider/openai_provider.py`、`anthropic_provider.py` |
+| P0-3 | LLM 调用独立限流（Semaphore(maxConcurrentCalls)） | `llm/sync_wrapper.py`、`llm/config.py` |
+| P0-4 | sync_wrapper 事件循环复用修复（常驻守护线程事件循环） | `llm/sync_wrapper.py` |
+| P0-5 | Celery 失败态干净回传与失败原因可观测（S4） | `tasks/generate_report.py` 等全部任务 |
+| P0-6 | report_generator 回归测试固化 | `tests/` |
+
+#### P1 达标差距项（阶段二，11/11 完成）
+
+| 编号 | 名称 | 关键文件 |
+|------|------|----------|
+| P1-1 | Celery 任务幂等（重复触发不产生重复检测） | `services/task_dispatcher.py`、`tasks/*` |
+| P1-2 | 前端 Error Boundary | `frontend/src/components/`、`main.tsx` |
+| P1-3 | axios 全局错误拦截 | `frontend/src/api/client.ts` |
+| P1-4 | Provider AsyncClient 统一关闭（含 S7 生命周期统一） | `main.py`、`celery_app.py` |
+| P1-5 | Compose 运维加固（restart policy + redis env_file） | `docker-compose.yml` |
+| P1-6 | 配置规范化与教训固化（单一事实来源） | `.env.example`、`.gitignore`、`config.py` |
+| P1-7 | Token 预算持久化（S1，重启不清零） | `llm/budget/token_budget.py` |
+| P1-8 | SSE 断线重连与降级轮询（S2） | `hooks/useSSE.ts` |
+| P1-9 | worker 优雅关闭超时匹配任务时长（S5） | `celery_app.py` |
+| P1-10 | 生产路径接入 AuditFindingSchema 校验（S6） | `services/engine/llm_audit.py` |
+| P1-11 | README 真实化 + TROUBLESHOOTING（S8） | `README.md` |
+
+#### P2 打磨项（阶段三，8/8 完成）
+
+| 编号 | 名称 | 关键文件 |
+|------|------|----------|
+| P2-1 | LLMObservability 指标加锁（`threading.Lock` 线程安全） | `llm/provider/provider_stats.py` |
+| P2-2 | 线程池-信号量边界协调（embedding 只锁网络 I/O） | `services/embedding.py` |
+| P2-3 | 前端长任务进度展示（SSE progress + 进度条 UI） | `hooks/useTaskProgress.ts`、`ProjectDetailPage.tsx` |
+| P2-4 | lifespan 迁移（`@app.on_event` → `asynccontextmanager`） | `main.py` |
+| P2-5 | 前端上传大小预校验（50MB 与 nginx 对齐） | `pages/Upload/UploadPage.tsx` |
+| P2-6 | manage.ps1 doctor 自检子命令（4 项检查） | `manage.ps1` |
+| P2-7 | 前端速赢包（`lang="zh-CN"` + `alert()` → Toast） | `index.html`、`LLMAuditPage.tsx` |
+| P2-8 | 解压安全测试固化 + tar 符号链接加固（S3 拮余） | `services/engine/upload.py`、`tests/` |
+
+#### 测试与验证
+
+- 单测：91 → **95 项全绿**（新增 P2-8 的 4 项 tar 安全回归测试）
+- 集成测试：20 项（P0-1 激活，服务不可达时自动 SKIP）
+- 前端构建：`tsc && vite build` 通过
+- 端到端：上传 → 分析 → LLM 审计 → 报告 → 下载 全链路 HTTP 200
+- 5 容器编排启动；`/health`、`/docs` 正常
+
+---
+
+### 🚀 性能压测与优化（Phase 4 — 2026-09-01）
+
+> 基于引擎级基线压测识别真实瓶颈并实施函数级 LLM 并行优化。详细数据见 `MODIFICATION_BLUEPRINT.md` 第 11 章。
+
+#### P4-1 基线压测（mock LLM/embedding）
+
+| 场景 | 耗时 | 结论 |
+|------|------|------|
+| A 单文件 2 函数 + 即时 mock | 1.5ms | 纯逻辑开销可忽略 |
+| B 5 文件 × 2 函数 + 即时 mock | 串 2.7ms / 并 3.4ms (0.77x) | 小任务下 ThreadPool 开销抵消收益（预期） |
+| C 单文件 2 函数 + LLM 50ms | 181.3ms | **LLM 串行调用是真实瓶颈** |
+| D 5 文件并行 + LLM 50ms | 935.7ms → 179.4ms (**5.22x**) | 文件级并行接近理论上限 |
+| E 批量 vs 逐个 embedding | 25.0ms / 308.0ms (**12.32x**) | `_BATCH_LIMIT=32` 批量化收益巨大 |
+| F 单文件 10 函数串行（基线） | 689.6ms | 单文件多函数串行瓶颈 |
+
+#### P4-3 优化：函数级 LLM 并行
+
+**改动**：`backend/app/services/engine/llm_audit.py`
+- 提取 `_audit_single_function()` 辅助方法（线程安全，token_budget check 内置 `threading.Lock`）
+- `execute_single_file` 内当 `len(key_functions) > _PARALLEL_FUNC_THRESHOLD(5)` 时启用 `ThreadPoolExecutor(max_workers=5)`
+- 阈值取 5：与全局 LLM `Semaphore(maxConcurrentCalls=5)` 对齐，避免多文件嵌套场景线程膨胀
+
+#### P4-3 验证
+
+| 场景 | P4-3 前 | P4-3 后 | 加速比 |
+|------|---------|---------|--------|
+| F 单文件 5 函数（≤阈值，串行路径） | — | 366.4ms | 守护串行 ✓ |
+| G 单文件 10 函数（>阈值，并行路径） | 689.6ms | 181.8ms | **3.79x** ✓ |
+
+#### 回归验证
+
+- 全量单测：**95/95 通过**（27 deselected，含 7 perf + 20 integration）
+- 7 个 perf 场景全绿（含 P4-3 前后对比守护）
+- 无功能回归
 
 ---
 
