@@ -75,7 +75,7 @@ Engineering optimizations applied to the audit pipeline:
 | **Embedding I/O** | Sequential per-file | Batched (32/request) | 20x throughput |
 | **Database writes** | N+1 session commits | Single-session batch commit | Atomic & fast |
 | **LLM calls** | Sequential per-file | File-level parallelism (5 workers) | 5x concurrency |
-| **Test coverage** | — | 73 tests passing | All green |
+| **Test coverage** | — | 91 unit + 20 integration tests | All green |
 
 **Key techniques:** `ThreadPoolExecutor(max_workers=5)` + `Semaphore(5)` for file-level parallelism · batch embedding (limit 32) · single-session batch commit for findings · `TaskDispatcher` Protocol for Service/Task decoupling.
 
@@ -309,17 +309,44 @@ alembic downgrade -1                                # Rollback
 ### Testing
 
 ```bash
-docker compose up -d                                # Start services
-cd tests && pip install -r requirements-test.txt
-pytest -v                                           # Run all 73 tests
-pytest test_integration.py -v                       # Integration suite
+# 单元测试（无需 Docker 服务栈，默认排除集成测试）
+venv\Scripts\python.exe -m pytest tests -m "not integration" -v
+
+# 集成测试（需 docker compose up -d 运行中，全部走 127.0.0.1）
+venv\Scripts\python.exe -m pytest tests -m integration -v
 ```
+
+> **测试声明（E8）**：91 项单测（`pytest -m "not integration"`）全绿；20 项集成测试（`pytest -m integration`）需 Docker 服务栈运行时可执行，服务不可达时自动 SKIP。以上数字经 `2026-08-30` 实测验证。
 
 ### HTTPS Deployment
 
 ```bash
 docker compose --profile https up -d               # Enable nginx TLS proxy
 ```
+
+---
+
+## TROUBLESHOOTING
+
+试运行期间实测踩坑记录（现象 → 根因 → 解法），与 `manage.ps1 doctor` 自检命令（P2-6）互相引用。
+
+### 1. API 容器启动即崩溃且永不自愈
+
+- **现象**：`docker compose up` 后 api 容器 2 秒退出，日志报数据库连接失败。
+- **根因**：`.env` 中写死了 `DATABASE_URL=...@localhost`，其优先级高于 compose 的 `POSTGRES_HOST=postgres` 覆盖；且旧版 compose 无 restart policy。
+- **解法**：注释 `.env` 中 `DATABASE_URL`/`REDIS_URL` 完整连接串（保留组件变量 `POSTGRES_*`/`REDIS_*`）；compose 已加 `restart: unless-stopped`（P1-5）。详见 `.env.example` 顶部注释。
+
+### 2. Alembic 迁移报 `NoSuchModuleError: driver`
+
+- **现象**：容器启动执行 `alembic upgrade head` 时报 `NoSuchModuleError: driver`。
+- **根因**：`alembic/env.py` 只认 `DATABASE_URL` 环境变量，缺失时落到 `alembic.ini` 模板占位符 `driver://`，绕过统一配置构建器。
+- **解法**：`env.py` 已增加回退 `settings.DATABASE_URL`（恢复单一事实来源 A3）。
+
+### 3. 前端访问报 `ERR_CONNECTION_RESET` / 页面白屏
+
+- **现象**：浏览器访问 `http://localhost:3000` 连接被重置。
+- **根因**：Windows 将 `localhost` 优先解析为 IPv6 `::1`，本机 Docker Desktop 的 IPv6 回环端口转发损坏。
+- **解法**：**一律使用 `127.0.0.1`** 代替 `localhost`（V2 约束）。
 
 ---
 

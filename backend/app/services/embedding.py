@@ -76,6 +76,8 @@ def get_embedding(text: str) -> list[float]:
             "请求 Embedding API: provider=%s, base_url=%s, model=%s",
             name, base_url, model,
         )
+        # P2-2: 信号量仅包裹实际网络 IO（post + raise_for_status），
+        # JSON 解析移出槽位争用路径，提升并发利用率（A5：与文件级 ThreadPool(5) 对齐）
         with _embedding_semaphore:
             resp = _embedding_client.post(
                 f"{base_url}/embeddings",
@@ -84,15 +86,15 @@ def get_embedding(text: str) -> list[float]:
             )
             resp.raise_for_status()
 
-            data = resp.json()
-            if "data" not in data or len(data["data"]) == 0:
-                raise ValueError("Empty embedding response from API")
-            embedding = data["data"][0].get("embedding")
-            if not embedding or not isinstance(embedding, list):
-                raise ValueError("Invalid embedding format in response")
+        data = resp.json()
+        if "data" not in data or len(data["data"]) == 0:
+            raise ValueError("Empty embedding response from API")
+        embedding = data["data"][0].get("embedding")
+        if not embedding or not isinstance(embedding, list):
+            raise ValueError("Invalid embedding format in response")
 
-            logger.debug("Embedding 获取成功，维度: %d", len(embedding))
-            return embedding
+        logger.debug("Embedding 获取成功，维度: %d", len(embedding))
+        return embedding
 
     raise ValueError(f"不支持的 Embedding Provider API 类型: {provider.api}")
 
@@ -150,6 +152,8 @@ def get_embedding_batch(texts: list[str]) -> list[list[float]]:
                 "请求批量 Embedding API: provider=%s, model=%s, batch_size=%d",
                 name, model, len(chunk),
             )
+            # P2-2: 信号量仅包裹网络 IO，JSON 解析与 append 循环移出槽位争用路径；
+            # 大 batch（≤32）解析期间释放槽位给其他文件并行 post，避免饥饿（A5 对齐）
             with _embedding_semaphore:
                 resp = _embedding_client.post(
                     f"{base_url}/embeddings",
@@ -158,19 +162,19 @@ def get_embedding_batch(texts: list[str]) -> list[list[float]]:
                 )
                 resp.raise_for_status()
 
-                data = resp.json()
-                if "data" not in data or len(data["data"]) != len(chunk):
-                    raise ValueError(
-                        f"批量 Embedding 响应数量不匹配: 期望 {len(chunk)}, 收到 {len(data.get('data', []))}"
-                    )
+            data = resp.json()
+            if "data" not in data or len(data["data"]) != len(chunk):
+                raise ValueError(
+                    f"批量 Embedding 响应数量不匹配: 期望 {len(chunk)}, 收到 {len(data.get('data', []))}"
+                )
 
-                # OpenAI API 返回的 data 按 index 排序，确保顺序一致
-                sorted_data = sorted(data["data"], key=lambda x: x.get("index", 0))
-                for item in sorted_data:
-                    emb = item.get("embedding")
-                    if not emb or not isinstance(emb, list):
-                        raise ValueError("Invalid embedding format in batch response")
-                    all_embeddings.append(emb)
+            # OpenAI API 返回的 data 按 index 排序，确保顺序一致
+            sorted_data = sorted(data["data"], key=lambda x: x.get("index", 0))
+            for item in sorted_data:
+                emb = item.get("embedding")
+                if not emb or not isinstance(emb, list):
+                    raise ValueError("Invalid embedding format in batch response")
+                all_embeddings.append(emb)
 
         logger.info("批量 Embedding 完成: %d 条文本, 维度 %d", len(texts), len(all_embeddings[0]) if all_embeddings else 0)
         return all_embeddings

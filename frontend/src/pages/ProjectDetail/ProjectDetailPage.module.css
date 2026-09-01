@@ -83,3 +83,65 @@
   border-radius: var(--ds-radius-xl);
   overflow: hidden;
 }
+
+/* P2-3: 长任务进度条 */
+.pd-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  background: var(--ds-color-bg-container);
+  border: 1px solid var(--ds-color-border-default);
+  border-left: 3px solid var(--ds-color-text-link, #1677ff);
+  border-radius: var(--ds-radius-md);
+}
+
+.pd-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  font-size: var(--ds-font-size-sm);
+}
+
+.pd-progress-phase {
+  font-weight: 600;
+  color: var(--ds-color-text-primary);
+}
+
+.pd-progress-count {
+  color: var(--ds-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.pd-progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--ds-color-border-default);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pd-progress-bar {
+  height: 100%;
+  background: var(--ds-color-text-link, #1677ff);
+  border-radius: 3px;
+  transition: width 240ms ease-out;
+}
+
+.pd-progress-bar[data-indeterminate='true'] {
+  width: 35% !important;
+  animation: pd-progress-indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes pd-progress-indeterminate {
+  0% { margin-left: -35%; }
+  100% { margin-left: 100%; }
+}
+
+.pd-progress-detail {
+  font-size: var(--ds-font-size-xs);
+  color: var(--ds-color-text-tertiary);
+  font-family: var(--ds-font-family-mono, ui-monospace, monospace);
+  word-break: break-all;
+}

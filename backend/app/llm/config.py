@@ -84,6 +84,11 @@ class AppConfig(BaseModel):
     reportDir: str = "reports"
     tokenBudget: int = 500000
     maxLLMCallsPerProject: int = 100
+    # LLM 调用独立并发限流（P0-3）：与文件级 ThreadPoolExecutor(5) 对齐（A5），
+    # 经 sync_wrapper 的 threading.Semaphore 生效，mtime 热加载
+    maxConcurrentCalls: int = 5
+    # P1-9: worker 优雅关闭超时（秒），≥ 最大预期任务时长，避免 warm shutdown 超时强杀
+    workerShutdownTimeout: int = 300
 
 
 class DatabaseConfig(BaseModel):

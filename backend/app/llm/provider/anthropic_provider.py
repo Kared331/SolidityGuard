@@ -7,7 +7,7 @@ import logging
 
 import httpx
 
-from .base import AbstractLLMProvider, LLMResponse
+from .base import AbstractLLMProvider, LLMResponse, llm_retry
 from ..config import ProviderConfig
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,7 @@ class AnthropicProvider(AbstractLLMProvider):
             return self._config.models[0].id
         raise ValueError("AnthropicProvider 没有配置任何模型")
 
+    @llm_retry(logger, "anthropic")
     async def chat_completion(
         self,
         system_prompt: str,

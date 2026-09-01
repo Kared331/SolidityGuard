@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     SolidGuard 管理门户 — 一键启动 + 交互式配置管理
 .DESCRIPTION
@@ -18,7 +18,8 @@ param(
     [switch]$Logs,
     [switch]$Status,
     [switch]$Health,
-    [switch]$Config
+    [switch]$Config,
+    [switch]$Doctor
 )
 
 $ErrorActionPreference = "Stop"
@@ -174,6 +175,82 @@ function Invoke-Health {
     if ($pgHealth) { Write-Info "PostgreSQL: $pgHealth" }
     $redisPing = docker exec solidguard-redis-1 redis-cli ping 2>$null
     if ($redisPing) { Write-Info "Redis: $redisPing" }
+}
+
+# ── P2-6: 环境自检（S9）──────────────────────────────────────────
+# 把 B1（.env 完整 URL 覆盖组件变量）、空 key、端口、localhost→::1 陷阱固化为自检工具
+function Invoke-Doctor {
+    Write-Title "环境自检（Doctor）"
+    $issues = 0
+
+    # 1. .env 残留覆盖组件变量的完整 URL（B1 教训）
+    Write-Host "`n[1/4] 检查 .env 是否残留覆盖组件变量的完整连接串..." -ForegroundColor Cyan
+    if (Test-Path $EnvFile) {
+        $envContent = Get-Content $EnvFile
+        $residualUrls = @()
+        foreach ($line in $envContent) {
+            # 未注释的 DATABASE_URL=/REDIS_URL= 完整 URL 会覆盖 POSTGRES_*/REDIS_* 组件变量
+            if ($line -match "^\s*(DATABASE_URL|REDIS_URL)\s*=\s*\S+") {
+                $residualUrls += $line.Trim()
+            }
+        }
+        if ($residualUrls.Count -gt 0) {
+            foreach ($l in $residualUrls) { Write-Err "  .env 残留完整 URL: $l" }
+            Write-Host "    -> 会覆盖 POSTGRES_*/REDIS_* 组件变量，容器内连不上数据库（B1 教训）" -ForegroundColor Gray
+            Write-Host "    -> 解法：注释该行（# 前缀），由组件变量构建 URL" -ForegroundColor Gray
+            $issues++
+        } else {
+            Write-Ok "  无残留完整 URL（组件变量构建 URL，符合设计）"
+        }
+    } else {
+        Write-Warn "  .env 不存在（首次运行 -Up 会自动创建）"
+    }
+
+    # 2. API_KEY / LLM_API_KEY 空值检查
+    Write-Host "`n[2/4] 检查 API_KEY / LLM_API_KEY 是否为空..." -ForegroundColor Cyan
+    $apiKey = Get-EnvValue "API_KEY"
+    $llmKey = Get-EnvValue "LLM_API_KEY"
+    if (-not $apiKey) {
+        Write-Err "  API_KEY 为空：全部业务请求将被 403 拒绝"
+        Write-Host "    -> 解法：.env 设置 API_KEY=solidguard-trialrun-2026（测试）或强随机值" -ForegroundColor Gray
+        $issues++
+    } else {
+        Write-Ok "  API_KEY 已设置（$($apiKey.Substring(0, [Math]::Min(12, $apiKey.Length)))...）"
+    }
+    if (-not $llmKey) {
+        Write-Warn "  LLM_API_KEY 为空：LLM 审计走降级路径（空 key 落 unknown-severity）"
+        Write-Host "    -> LLM 真实链路无法端到端验证；如需审计请配置 key" -ForegroundColor Gray
+    } else {
+        Write-Ok "  LLM_API_KEY 已设置"
+    }
+
+    # 3. 目标端口监听状态
+    Write-Host "`n[3/4] 检查目标端口监听状态..." -ForegroundColor Cyan
+    foreach ($port in @(8000, 3000)) {
+        try {
+            $conn = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction Stop
+            if ($conn) { Write-Ok "  端口 $port 正在监听" }
+            else { Write-Warn "  端口 $port 未监听（服务未启动？-Up 启动）" }
+        } catch {
+            Write-Warn "  端口 $port 未监听（服务未启动？-Up 启动）"
+        }
+    }
+
+    # 4. localhost -> ::1 IPv6 回环陷阱提示（V2 约束）
+    Write-Host "`n[4/4] localhost IPv6 回环陷阱提示..." -ForegroundColor Cyan
+    Write-Host "  本机 Docker Desktop 的 IPv6 回环（::1）端口转发损坏，" -ForegroundColor Gray
+    Write-Host "  Windows 将 localhost 优先解析为 ::1，连接必被重置。" -ForegroundColor Gray
+    Write-Host "  -> 所有验证/访问统一使用 127.0.0.1（V2 约束）" -ForegroundColor Yellow
+    Write-Host "    前端: http://127.0.0.1:3000  API: http://127.0.0.1:8000" -ForegroundColor Gray
+
+    # 总结
+    Write-Host ""
+    if ($issues -gt 0) {
+        Write-Err "自检发现 $issues 个阻断性问题，请按上述提示修复"
+    } else {
+        Write-Ok "环境自检通过，无阻断性问题"
+    }
+    Write-Host "  详见 README TROUBLESHOOTING 章节" -ForegroundColor Gray
 }
 
 function Show-AccessInfo {
@@ -394,6 +471,7 @@ function Show-MainMenu {
         Write-Host "║  ───────────────────────────────    ║" -ForegroundColor Gray
         Write-Host "║  6. 配置管理                        ║" -ForegroundColor White
         Write-Host "║  7. 健康检查                        ║" -ForegroundColor White
+        Write-Host "║  8. 环境自检（Doctor）             ║" -ForegroundColor White
         Write-Host "║  0. 退出                            ║" -ForegroundColor White
         Write-Host "╚══════════════════════════════════════╝" -ForegroundColor Magenta
 
@@ -407,6 +485,7 @@ function Show-MainMenu {
             "5" { Invoke-Status }
             "6" { Show-ConfigMenu }
             "7" { Invoke-Health }
+            "8" { Invoke-Doctor }
             "0" { break mainLoop }
             default { Write-Warn "无效选择" }
         }

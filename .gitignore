@@ -31,6 +31,9 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+# P1-6: 试运行备份（B1 教训产物，不应入库）
+.env.bak-trialrun
+.env.bak
 
 # ─── Uploads & generated reports ────────────────────────────────
 uploads/
@@ -66,8 +69,16 @@ Desktop.ini
 
 # ─── IDE / Agent tools ──────────────────────────────────────────
 .trae/
+.trae-html-share-packages/
 .reasonix/
 .brooks-lint-history.json
+
+# ─── Personal / non-project artifacts ───────────────────────────
+resume/
+vmware_cleanup.ps1
+
+# ─── Internal planning docs (not shipped to repo) ──────────────
+MODIFICATION_BLUEPRINT.md
 
 # ─── Local config duplicates ────────────────────────────────────
 backend/solidguard.json

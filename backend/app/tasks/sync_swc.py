@@ -71,7 +71,7 @@ def sync_swc(self):
         logger.info("SWC sync completed: %d entries synced", result["entries_synced"])
         return {"status": "completed", "entries_synced": result["entries_synced"]}
 
-    except Exception as e:
-        logger.exception("SWC sync failed: %s", e)
-        self.update_state(state="FAILURE", meta={"exc": str(e)})
+    except Exception:
+        # P0-5: FAILURE 态交由 Celery 原生标记（手动 update_state 破坏结果协议）
+        logger.exception("SWC sync failed")
         raise

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppShell from './layouts/AppShell/AppShell';
 import ToastContainer from './components/Toast/ToastContainer';
+import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 
 /* ===== Design Tokens & Global Styles ===== */
 import './design-system/tokens/index.css';
@@ -47,6 +48,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ToastContainer />
+        <ErrorBoundary>
         <Suspense fallback={<PageLoading />}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -60,6 +62,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             </Route>
           </Routes>
         </Suspense>
+        </ErrorBoundary>
       </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>

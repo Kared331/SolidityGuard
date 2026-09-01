@@ -39,7 +39,8 @@ def generate_report(self, project_id: int, output_format: str = "html") -> int:
         )
         return report.id
 
-    except Exception as e:
+    except Exception:
+        # P0-5: FAILURE 态交由 Celery 原生标记——手动 update_state(FAILURE)
+        # 会破坏结果后端 FAILURE 协议（KeyError: 'exc_type' 二次异常）
         logger.exception("Report generation failed for project %d", project_id)
-        self.update_state(state="FAILURE", meta={"exc": str(e)})
         raise

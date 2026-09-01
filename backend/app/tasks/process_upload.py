@@ -64,8 +64,8 @@ def process_upload(self, project_id: int) -> None:
             result["count"],
         )
 
-    except Exception as e:
+    except Exception:
+        # P0-5: FAILURE 态交由 Celery 原生标记（手动 update_state 破坏结果协议）
         logger.exception("Failed to process upload for project %d", project_id)
         # Keep processing status on failure
-        self.update_state(state="FAILURE", meta={"exc": str(e)})
         raise

@@ -60,12 +60,24 @@ class UploadEngine(BaseEngine):
                 try:
                     with tarfile.open(fpath, "r:gz") as tf:
                         for member in tf.getmembers():
-                            member_path = os.path.join(project_dir, member.name)
-                            resolved = Path(member_path).resolve()
-                            base = Path(project_dir).resolve()
-                            try:
-                                resolved.relative_to(base)
-                            except ValueError:
+                            # P2-8: 显式拒绝特殊成员（symlink/hardlink/chardev/blockdev/fifo）
+                            # 这类成员可能指向 base_dir 外目标或造成其他安全风险，一律不解压；
+                            # Python < 3.12 无 extractall(filter="data")，故手动拦截
+                            if (
+                                member.issym()
+                                or member.islnk()
+                                or member.ischr()
+                                or member.isblk()
+                                or member.isfifo()
+                            ):
+                                self.logger.warning(
+                                    "Tar 特殊成员拒绝解压: %s in archive %s",
+                                    member.name,
+                                    fname,
+                                )
+                                continue
+                            # 复用 _is_safe_path 防护 tar-slip（与 zip 分支一致，A9 约束）
+                            if not _is_safe_path(project_dir, member.name):
                                 self.logger.warning(
                                     "Tar Slip blocked: %s in archive %s",
                                     member.name,

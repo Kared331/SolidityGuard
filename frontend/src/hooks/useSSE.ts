@@ -52,6 +52,8 @@ export function useSSE({ projectId, enabled = true }: UseSSEOptions) {
   const [lastEvent, setLastEvent] = useState<SSEEvent | null>(null);
   const [error, setError] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
+  // P1-8: 降级轮询——断线持续超过阈值时启用 react-query refetchInterval
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleEvent = useCallback(
     (data: SSEEvent) => {
@@ -77,9 +79,29 @@ export function useSSE({ projectId, enabled = true }: UseSSEOptions) {
     [queryClient, addToast],
   );
 
+  // P1-8: 降级轮询——SSE 断线超过 15s 后定期刷新关键 query
+  const startFallbackPoll = useCallback(() => {
+    if (pollRef.current) return;
+    const pid = String(projectId);
+    pollRef.current = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(pid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.analyses.byProject(pid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.auditResults.byProject(pid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.reports.byProject(pid) });
+    }, 10000);
+  }, [projectId, queryClient]);
+
+  const stopFallbackPoll = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     if (!enabled || !projectId) return;
     let cancelled = false;
+    let disconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
     const sseUrl = `${baseUrl}/v1/projects/${projectId}/events`;
@@ -94,6 +116,12 @@ export function useSSE({ projectId, enabled = true }: UseSSEOptions) {
           setConnected(true);
           setError(null);
           setSseConnected(true);
+          // 重连成功后停用降级轮询
+          stopFallbackPoll();
+          if (disconnectTimer) {
+            clearTimeout(disconnectTimer);
+            disconnectTimer = null;
+          }
         }
       };
 
@@ -113,21 +141,31 @@ export function useSSE({ projectId, enabled = true }: UseSSEOptions) {
           setConnected(false);
           setError('SSE connection lost');
           setSseConnected(false);
+          // P1-8: 不再主动 close()——交还浏览器原生重连（EventSource 自带断线重试）
+          // 断线持续超过 15s 后启用降级轮询兜底
+          if (!disconnectTimer) {
+            disconnectTimer = setTimeout(() => {
+              startFallbackPoll();
+            }, 15000);
+          }
         }
-        es.close();
-        esRef.current = null;
       };
     }, 200);
 
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      if (disconnectTimer) {
+        clearTimeout(disconnectTimer);
+        disconnectTimer = null;
+      }
+      stopFallbackPoll();
       if (esRef.current) {
         esRef.current.close();
         esRef.current = null;
       }
     };
-  }, [projectId, enabled, handleEvent, setSseConnected]);
+  }, [projectId, enabled, handleEvent, setSseConnected, startFallbackPoll, stopFallbackPoll]);
 
   return { connected, lastEvent, error };
 }

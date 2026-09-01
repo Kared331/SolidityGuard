@@ -52,7 +52,7 @@ def run_slither(self, project_id: int) -> None:
             result["detection_count"],
         )
 
-    except Exception as e:
+    except Exception:
+        # P0-5: FAILURE 态交由 Celery 原生标记（手动 update_state 破坏结果协议）
         logger.exception("Failed to save Slither results for project %d", project_id)
-        self.update_state(state="FAILURE", meta={"exc": str(e)})
         raise

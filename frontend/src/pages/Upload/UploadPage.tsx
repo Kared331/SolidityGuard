@@ -28,6 +28,14 @@ export default function UploadPage() {
 
   const handleFile = useCallback((f: File | null) => {
     if (!f) return;
+    // P2-5: 上传前预校验文件大小（与 nginx client_max_body_size 50m 对齐，避免先传后拒）
+    const MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50MB
+    if (f.size > MAX_UPLOAD_SIZE) {
+      setFile(null);
+      setPhase('error');
+      setErrorMessage(`文件大小 ${formatFileSize(f.size)} 超过 50MB 限制`);
+      return;
+    }
     setFile(f);
     setPhase('file-selected');
     setErrorMessage('');

@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Project, Report
 from app.services.infra.storage import REPORT_DIR
 from app.state.project_state import ProjectStatus
-from app.tasks.pipeline import build_report_pipeline
+from app.services.task_dispatcher import get_task_dispatcher, TaskAlreadyRunning
+from app.tasks.pipeline import build_report_pipeline  # 保留：E2 技术冗余
 
 from fastapi import HTTPException
 
@@ -23,8 +24,12 @@ async def trigger_report(db: AsyncSession, project_id: int, fmt: str) -> str:
     output_format = fmt.lower()
     if output_format not in ("html", "pdf", "word"):
         raise HTTPException(status_code=400, detail="format must be html, pdf, or word")
-    result = build_report_pipeline(project_id, output_format).apply_async()
-    return result.id
+    # P1-1: 统一走 dispatcher（含幂等检查）
+    dispatcher = get_task_dispatcher()
+    try:
+        return dispatcher.dispatch_report(project_id, output_format)
+    except TaskAlreadyRunning as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
 
 async def list_reports(db: AsyncSession, project_id: int) -> list[Report]:

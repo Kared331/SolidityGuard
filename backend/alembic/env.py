@@ -16,7 +16,13 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Override sqlalchemy.url from environment variable
+# 优先级：DATABASE_URL 环境变量 > app 统一配置构建器（POSTGRES_* 组件）
+# 容器内 POSTGRES_HOST=postgres 由 compose 覆盖，避免 alembic.ini 占位符失效
 DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    from app.config import settings
+
+    DATABASE_URL = settings.DATABASE_URL
 if DATABASE_URL:
     config.set_main_option("sqlalchemy.url", DATABASE_URL)
 

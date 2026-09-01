@@ -10,7 +10,9 @@
     "uploadDir": "uploads",
     "reportDir": "reports",
     "tokenBudget": 500000,
-    "maxLLMCallsPerProject": 100
+    "maxLLMCallsPerProject": 100,
+    "maxConcurrentCalls": 5,
+    "workerShutdownTimeout": 300
   },
   "database": {
     "url": "",

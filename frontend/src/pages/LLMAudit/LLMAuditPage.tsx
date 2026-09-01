@@ -4,6 +4,8 @@ import { Spinner, Button, Icon } from '../../design-system';
 import { useAuditResults } from '../../api/hooks/useAuditResults';
 import { useProject } from '../../api/hooks/useProjects';
 import { useAuditDetailStore } from '../../stores/useAuditDetailStore';
+// P2-7: alert() → Toast 体系（与全局错误拦截一致，避免阻塞主线程）
+import { useToastStore } from '../../stores/useToastStore';
 import { formatDate } from '../../utils/format';
 import { SEVERITY_CONFIG, SEVERITY_ORDER } from '../../utils/severity';
 import ExecutiveSummary from './ExecutiveSummary';
@@ -36,6 +38,8 @@ export default function LLMAuditPage() {
   const { data: findings, isLoading: findingsLoading } = useAuditResults(projectId);
 
   const { drawerOpen, selectedFinding, findingType, closeDrawer } = useAuditDetailStore();
+  // P2-7: 用 Toast 替代 alert，避免阻塞主线程
+  const addToast = useToastStore((s) => s.addToast);
 
   const isLoading = projectLoading || findingsLoading;
   const auditFindings = findings || [];
@@ -54,7 +58,7 @@ export default function LLMAuditPage() {
   const total = auditFindings.length;
 
   const handleReaudit = () => {
-    alert('重新审计功能即将上线，敬请期待。');
+    addToast({ type: 'info', message: '重新审计功能即将上线，敬请期待。', duration: 3000 });
   };
 
   const handleExportReport = () => {

@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import LLMAuditResult, Project
 from app.state.project_state import ProjectStatus
-from app.tasks.pipeline import build_llm_audit_pipeline
+from app.services.task_dispatcher import get_task_dispatcher, TaskAlreadyRunning
+from app.tasks.pipeline import build_llm_audit_pipeline  # 保留：E2 技术冗余
 
 from fastapi import HTTPException
 
@@ -16,8 +17,12 @@ async def trigger_llm_audit(db: AsyncSession, project_id: int) -> str:
         raise HTTPException(status_code=404, detail="Project not found")
     if project.status != ProjectStatus.READY.value:
         raise HTTPException(status_code=409, detail=f"Project is '{project.status}', not ready for LLM audit")
-    result = build_llm_audit_pipeline(project_id).apply_async()
-    return result.id
+    # P1-1: 统一走 dispatcher（含幂等检查）
+    dispatcher = get_task_dispatcher()
+    try:
+        return dispatcher.dispatch_llm_audit(project_id)
+    except TaskAlreadyRunning as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
 
 async def list_llm_audit_results(db: AsyncSession, project_id: int) -> list[LLMAuditResult]:

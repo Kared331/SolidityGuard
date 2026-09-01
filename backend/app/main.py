@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 
 import redis.asyncio as aioredis
 from fastapi import FastAPI, Request
@@ -24,7 +25,43 @@ limiter = Limiter(
     storage_uri=settings.REDIS_URL,
 )
 
-app = FastAPI(title="SolidiGuard API")
+
+# P2-4: lifespan 迁移——消除 @app.on_event("shutdown") 弃用警告；
+# P1-4 的 Provider/loop 关闭逻辑迁入此处，避免二次改 main.py
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup（当前无 startup 钩子逻辑，limiter 在模块级已初始化）
+    yield
+    # shutdown
+    logger.info("Shutting down: closing database connections...")
+    await async_engine.dispose()
+
+    # P1-4: 关闭 Provider HTTP 客户端（与 worker_process_shutdown 钩子对称，S7 生命周期统一）
+    try:
+        from app.llm.provider.provider_registry import get_provider_registry
+
+        registry = get_provider_registry()
+        provider = registry.get()
+        if hasattr(provider, "close"):
+            await provider.close()
+            logger.info("Provider HTTP 客户端已关闭")
+    except Exception as exc:
+        logger.debug("关闭 Provider 时跳过: %s", exc)
+
+    # 关闭 sync_wrapper 常驻事件循环（若已初始化）
+    try:
+        from app.llm import sync_wrapper
+
+        if sync_wrapper._loop is not None and not sync_wrapper._loop.is_closed():
+            sync_wrapper._loop.call_soon_threadsafe(sync_wrapper._loop.stop)
+            logger.info("LLM 常驻事件循环已请求停止")
+    except Exception as exc:
+        logger.debug("关闭事件循环时跳过: %s", exc)
+
+    logger.info("Shutdown complete.")
+
+
+app = FastAPI(title="SolidiGuard API", lifespan=lifespan)
 app.state.limiter = limiter
 
 
@@ -119,13 +156,6 @@ async def health():
         status_code=status_code,
         content={"status": overall, "checks": checks},
     )
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("Shutting down: closing database connections...")
-    await async_engine.dispose()
-    logger.info("Shutdown complete.")
 
 
 if __name__ == "__main__":

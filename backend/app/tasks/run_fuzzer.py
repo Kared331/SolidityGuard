@@ -36,7 +36,7 @@ def run_fuzzer(self, project_id: int) -> None:
             len(result["failures"]) if result["failures"] else 0,
         )
 
-    except Exception as e:
+    except Exception:
+        # P0-5: FAILURE 态交由 Celery 原生标记（手动 update_state 破坏结果协议）
         logger.exception("Failed to run fuzzer for project %d", project_id)
-        self.update_state(state="FAILURE", meta={"exc": str(e)})
         raise

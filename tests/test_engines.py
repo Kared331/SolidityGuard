@@ -6,6 +6,7 @@ Tests:
 - report engine: ReportEngine.execute with mocks
 """
 
+import io
 import json
 import os
 import sys
@@ -133,6 +134,99 @@ class TestZipSlipPrevention:
         assert not evil_path.exists(), "Zip Slip file should not have been extracted"
         assert result["count"] == 1
         assert any("safe.sol" in f for f in result["sol_files"])
+
+
+# ─── Upload Engine: Tar Slip & Symlink Hardening (P2-8) ─────────
+
+class TestTarSlipHardening:
+    """P2-8: tar 解压路径穿越与符号链接加固红绿测试（守护 A9 约束）。"""
+
+    def test_tar_slip_member_blocked_by_is_safe_path(self, tmp_path):
+        """tar 条目名含 ../ 应被 _is_safe_path 拒绝。"""
+        import tarfile
+        from app.services.engine.upload import _is_safe_path
+
+        tar_path = tmp_path / "attack.tar.gz"
+        with tarfile.open(str(tar_path), "w:gz") as tf:
+            info = tarfile.TarInfo(name="../../evil.txt")
+            info.size = 0
+            tf.addfile(info, io.BytesIO(b""))
+
+        with tarfile.open(str(tar_path), "r:gz") as tf:
+            for member in tf.getmembers():
+                assert _is_safe_path(str(tmp_path), member.name) is False
+
+    def test_execute_blocks_tar_slip(self, tmp_path):
+        """UploadEngine.execute 对含 ../../pwned.txt 的 tar.gz 应跳过恶意条目。"""
+        import tarfile
+
+        tar_path = tmp_path / "malicious.tar.gz"
+        with tarfile.open(str(tar_path), "w:gz") as tf:
+            evil_data = b"pwned"
+            evil_info = tarfile.TarInfo(name="../../pwned.txt")
+            evil_info.size = len(evil_data)
+            tf.addfile(evil_info, io.BytesIO(evil_data))
+
+            safe_data = b"pragma solidity ^0.8.0;"
+            safe_info = tarfile.TarInfo(name="safe.sol")
+            safe_info.size = len(safe_data)
+            tf.addfile(safe_info, io.BytesIO(safe_data))
+
+        engine = UploadEngine()
+        result = engine.execute(project_id=1, project_dir=str(tmp_path))
+
+        escaped_file = tmp_path.parent.parent / "pwned.txt"
+        assert not escaped_file.exists(), "Tar Slip: 恶意文件被提取到项目目录外"
+        assert result["count"] == 1
+        assert any("safe.sol" in f for f in result["sol_files"])
+
+    def test_execute_rejects_tar_symlink_member(self, tmp_path):
+        """tar 含指向外部的 symlink 成员应被显式拒绝解压。"""
+        import tarfile
+
+        tar_path = tmp_path / "symlink.tar.gz"
+        with tarfile.open(str(tar_path), "w:gz") as tf:
+            link_info = tarfile.TarInfo(name="evil_link")
+            link_info.type = tarfile.SYMTYPE
+            link_info.linkname = "/etc/passwd"
+            tf.addfile(link_info)
+
+            safe_data = b"pragma solidity ^0.8.0;"
+            safe_info = tarfile.TarInfo(name="ok.sol")
+            safe_info.size = len(safe_data)
+            tf.addfile(safe_info, io.BytesIO(safe_data))
+
+        engine = UploadEngine()
+        result = engine.execute(project_id=1, project_dir=str(tmp_path))
+
+        evil_link = tmp_path / "evil_link"
+        assert not evil_link.is_symlink(), "Tar symlink 成员应被拒绝解压"
+        assert result["count"] == 1
+        assert any("ok.sol" in f for f in result["sol_files"])
+
+    def test_tar_safe_extract(self, tmp_path):
+        """正常 tar.gz 含 .sol 文件应被正常解压并扫描。"""
+        import tarfile
+
+        tar_path = tmp_path / "safe.tar.gz"
+        with tarfile.open(str(tar_path), "w:gz") as tf:
+            data1 = b"pragma solidity ^0.8.0;"
+            info1 = tarfile.TarInfo(name="Token.sol")
+            info1.size = len(data1)
+            tf.addfile(info1, io.BytesIO(data1))
+
+            data2 = b"// helper"
+            info2 = tarfile.TarInfo(name="sub/Helper.sol")
+            info2.size = len(data2)
+            tf.addfile(info2, io.BytesIO(data2))
+
+        engine = UploadEngine()
+        result = engine.execute(project_id=1, project_dir=str(tmp_path))
+
+        assert result["count"] == 2
+        names = {os.path.basename(f) for f in result["sol_files"]}
+        assert "Token.sol" in names
+        assert "Helper.sol" in names
 
 
 # ─── LLM Audit Engine: _parse_llm_json ──────────────────────────

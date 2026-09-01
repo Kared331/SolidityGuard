@@ -38,11 +38,14 @@ def aggregate_findings(project_id: int, session: Session) -> dict:
         if det.detection_ref in false_positive_refs:
             continue
         element = det.element_json or {}
+        # Slither 的 elements 字段是数组，取首个元素定位；防御 source_mapping 为 None
+        if isinstance(element, list):
+            element = element[0] if element else {}
         slither_findings.append({
             "check_name": det.check_name,
             "description": det.description,
             "impact": det.impact or "Unknown",
-            "code_location": element.get("source_mapping", {}).get("filename_relative", "N/A"),
+            "code_location": (element.get("source_mapping") or {}).get("filename_relative", "N/A"),
             "fix_suggestion": "",
             "gas_optimization": "",
         })

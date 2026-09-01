@@ -123,7 +123,7 @@ def cleanup_old_files(self):
             cleaned_reports,
         )
 
-    except Exception as e:
-        logger.exception("Cleanup task failed: %s", e)
-        self.update_state(state="FAILURE", meta={"exc": str(e)})
+    except Exception:
+        # P0-5: FAILURE 态交由 Celery 原生标记（手动 update_state 破坏结果协议）
+        logger.exception("Cleanup task failed")
         raise

@@ -1,4 +1,23 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo } from 'react';
+
+/**
+ * P2-3: 审计长任务进度展示。
+ *
+ * 派生 hook——不创建独立 SSE 连接，而是从 useSSE 暴露的 lastEvent 中
+ * 抽取 audit_progress 事件，输出最新进度快照。避免重复 EventSource 连接。
+ *
+ * 后端事件 schema（见 backend/app/llm/pipeline/stream.py::publish_progress）：
+ *   { type: 'audit_progress', project_id, phase, current_file, current_function,
+ *     total_functions, completed_functions, findings_so_far }
+ */
+export interface AuditProgress {
+  phase: string;
+  current_file?: string | null;
+  current_function?: string | null;
+  total_functions: number;
+  completed_functions: number;
+  findings_so_far: number;
+}
 
 interface SSEEvent {
   type: string;
@@ -7,68 +26,50 @@ interface SSEEvent {
 }
 
 interface UseTaskProgressOptions {
-  projectId: string;
-  onEvent?: (event: SSEEvent) => void;
-  enabled?: boolean;
+  lastEvent: SSEEvent | null;
 }
 
 interface UseTaskProgressResult {
-  connected: boolean;
-  lastEvent: SSEEvent | null;
-  error: string | null;
+  progress: AuditProgress | null;
+  /** 0–100 整数百分比，无进度时为 null */
+  percent: number | null;
 }
 
-function useTaskProgress({ projectId, onEvent, enabled = true }: UseTaskProgressOptions): UseTaskProgressResult {
-  const [connected, setConnected] = useState(false);
-  const [lastEvent, setLastEvent] = useState<SSEEvent | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const onEventRef = useRef(onEvent);
-  onEventRef.current = onEvent;
-  const esRef = useRef<EventSource | null>(null);
+const PHASE_LABELS: Record<string, string> = {
+  parsing: '解析合约',
+  summarizing: '生成摘要',
+  embedding: '向量化',
+  rag_retrieval: '检索漏洞知识',
+  auditing: 'LLM 审计中',
+  complete: '审计完成',
+};
 
-  useEffect(() => {
-    if (!enabled || !projectId) return;
-    let cancelled = false;
+export function phaseLabel(phase: string): string {
+  return PHASE_LABELS[phase] ?? phase;
+}
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-    const sseUrl = `${baseUrl}/v1/projects/${projectId}/events`;
-
-    // Delay SSE open to avoid ERR_ABORTED on fast route switches
-    const timer = setTimeout(() => {
-      if (cancelled) return;
-      const es = new EventSource(sseUrl);
-      esRef.current = es;
-      es.onopen = () => {
-        if (!cancelled) { setConnected(true); setError(null); }
-      };
-      es.onmessage = (event) => {
-        if (cancelled) return;
-        try {
-          const data = JSON.parse(event.data) as SSEEvent;
-          setLastEvent(data);
-          onEventRef.current?.(data);
-        } catch {
-          /* ignore parse errors */
-        }
-      };
-      es.onerror = () => {
-        if (!cancelled) { setConnected(false); setError('SSE connection lost'); }
-        es.close();
-        esRef.current = null;
-      };
-    }, 200);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      if (esRef.current) {
-        esRef.current.close();
-        esRef.current = null;
-      }
+function useTaskProgress({ lastEvent }: UseTaskProgressOptions): UseTaskProgressResult {
+  const progress = useMemo<AuditProgress | null>(() => {
+    if (!lastEvent || lastEvent.type !== 'audit_progress') return null;
+    return {
+      phase: String(lastEvent.phase ?? ''),
+      current_file: (lastEvent.current_file as string | null | undefined) ?? null,
+      current_function: (lastEvent.current_function as string | null | undefined) ?? null,
+      total_functions: Number(lastEvent.total_functions ?? 0),
+      completed_functions: Number(lastEvent.completed_functions ?? 0),
+      findings_so_far: Number(lastEvent.findings_so_far ?? 0),
     };
-  }, [projectId, enabled]);
+  }, [lastEvent]);
 
-  return { connected, lastEvent, error };
+  const percent = useMemo(() => {
+    if (!progress) return null;
+    if (progress.phase === 'complete') return 100;
+    if (progress.total_functions <= 0) return null;
+    const p = Math.round((progress.completed_functions / progress.total_functions) * 100);
+    return Math.max(0, Math.min(100, p));
+  }, [progress]);
+
+  return { progress, percent };
 }
 
 export default useTaskProgress;

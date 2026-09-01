@@ -7,6 +7,7 @@ import { useAnalyses } from '../../api/hooks/useAnalyses';
 import { useFuzzResults } from '../../api/hooks/useFuzzResults';
 import { useAuditResults } from '../../api/hooks/useAuditResults';
 import { useSSE } from '../../hooks/useSSE';
+import useTaskProgress, { phaseLabel } from '../../hooks/useTaskProgress';
 import { useAppStore } from '../../stores/useAppStore';
 import { useAuditDetailStore } from '../../stores/useAuditDetailStore';
 import OperationBar from './OperationBar';
@@ -37,7 +38,9 @@ export default function ProjectDetailPage() {
   const { data: analyses = [] } = useAnalyses(projectId);
   const { data: fuzzResults = [] } = useFuzzResults(projectId);
   const { data: auditResults = [] } = useAuditResults(projectId);
-  useSSE({ projectId });
+  const { lastEvent } = useSSE({ projectId });
+  // P2-3: 从 SSE audit_progress 事件派生进度快照（无独立连接）
+  const { progress, percent } = useTaskProgress({ lastEvent });
   const setCurrentProject = useAppStore((s) => s.setCurrentProject);
   const { drawerOpen, selectedFinding, findingType, closeDrawer } = useAuditDetailStore();
 
@@ -126,6 +129,33 @@ export default function ProjectDetailPage() {
 
       {/* Operation Bar */}
       <OperationBar projectId={projectId} />
+
+      {/* P2-3: 长任务实时进度条（仅 audit_progress 事件到达后渲染） */}
+      {progress && (
+        <div className={styles['pd-progress']} role="status" aria-live="polite">
+          <div className={styles['pd-progress-head']}>
+            <span className={styles['pd-progress-phase']}>
+              {phaseLabel(progress.phase)}
+            </span>
+            <span className={styles['pd-progress-count']}>
+              {progress.completed_functions}/{progress.total_functions} 函数
+              {progress.findings_so_far > 0 && ` · ${progress.findings_so_far} 条发现`}
+            </span>
+          </div>
+          <div className={styles['pd-progress-track']}>
+            <div
+              className={styles['pd-progress-bar']}
+              style={{ width: percent != null ? `${percent}%` : '100%' }}
+              data-indeterminate={percent == null ? 'true' : 'false'}
+            />
+          </div>
+          {progress.current_function && (
+            <div className={styles['pd-progress-detail']}>
+              当前: {progress.current_file ?? ''}::{progress.current_function}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Files Panel */}
       <FilesPanel projectId={projectId} />

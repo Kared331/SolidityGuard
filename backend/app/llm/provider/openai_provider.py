@@ -4,7 +4,7 @@ from typing import Any
 import httpx
 
 from ..config import ProviderConfig
-from .base import AbstractLLMProvider, LLMResponse
+from .base import AbstractLLMProvider, LLMResponse, llm_retry
 
 logger = logging.getLogger("solidguard.llm.provider.openai")
 
@@ -40,6 +40,7 @@ class OpenAIProvider(AbstractLLMProvider):
             return self._config.models[0].id
         return self._config.defaultModel
 
+    @llm_retry(logger, "openai")
     async def chat_completion(
         self,
         system_prompt: str,

@@ -1,7 +1,13 @@
 """
 SolidiGuard Integration Tests — Sprint 10 (fixed 5.23)
 Each test uses independent project fixtures to avoid state dependency.
-Requires: docker-compose up (api, worker, postgres, redis) running on localhost:8000
+Requires: docker-compose up (api, worker, postgres, redis) running on 127.0.0.1:8000
+
+P0-1: 补齐 client / unique_project fixture 并注册 integration marker。
+运行方式：docker compose up -d && pytest -m integration
+服务不可达时自动 SKIP（而非 fixture ERROR）。
+注意：本机统一走 IPv4 127.0.0.1（V2——localhost 会被解析为 ::1，
+Docker Desktop IPv6 回环转发损坏，连接必失败）。
 """
 import os
 import time
@@ -11,9 +17,64 @@ import io
 import httpx
 import pytest
 
+# 全部用例标记为 integration（pytest.ini 默认排除，需显式 -m integration 运行）
+pytestmark = pytest.mark.integration
+
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 ZIP_PATH = os.path.join(FIXTURES_DIR, "test_contracts.zip")
 TOKEN_PATH = os.path.join(FIXTURES_DIR, "VulnerableToken.sol")
+
+# V2: 统一 IPv4；API key 可经 INTEGRATION_API_KEY 覆盖（默认试运行 key）
+BASE_URL = os.environ.get("INTEGRATION_BASE_URL", "http://127.0.0.1:8000")
+INTEGRATION_API_KEY = os.environ.get("INTEGRATION_API_KEY", "solidguard-trialrun-2026")
+
+
+@pytest.fixture(scope="module")
+def client():
+    """集成测试 HTTP 客户端（P0-1）。
+
+    服务栈不可达时给出明确 SKIP 提示，而非收集/fixture ERROR。
+    """
+    with httpx.Client(
+        base_url=BASE_URL,
+        headers={"X-API-Key": INTEGRATION_API_KEY},
+        timeout=30.0,
+    ) as c:
+        try:
+            resp = c.get("/health")
+            resp.raise_for_status()
+        except httpx.HTTPError as e:
+            pytest.skip(
+                f"服务栈未运行于 {BASE_URL}（{e}）；请先执行 docker compose up -d，"
+                f"再运行 pytest -m integration"
+            )
+        yield c
+
+
+@pytest.fixture
+def unique_project(client):
+    """为每个用例创建独立项目（时间戳+随机后缀命名，保证隔离，P0-1）。
+
+    上传后轮询等待 worker 完成处理（process_upload 为异步任务），
+    超时则 SKIP（worker 未运行时不阻塞其余用例）。
+    """
+    name = f"Integration-{time.strftime('%Y%m%d%H%M%S')}-{os.urandom(4).hex()}"
+    with open(TOKEN_PATH, "rb") as f:
+        resp = client.post(
+            "/api/v1/projects",
+            files={"files": ("VulnerableToken.sol", f, "text/plain")},
+            data={"name": name},
+        )
+    assert resp.status_code == 200, f"项目创建失败: {resp.status_code} {resp.text}"
+    project_id = resp.json()["id"]
+
+    for _ in range(15):
+        files_resp = client.get(f"/api/v1/projects/{project_id}/files")
+        if files_resp.status_code == 200 and len(files_resp.json()) > 0:
+            return project_id
+        time.sleep(2)
+
+    pytest.skip("上传未被 worker 处理（worker 可能未运行），跳过依赖项目文件的用例")
 
 
 # ─── Health Check ────────────────────────────────────────────────

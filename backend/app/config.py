@@ -65,6 +65,7 @@ class Settings:
         self.REPORT_DIR: str = config.app.reportDir
         self.TOKEN_BUDGET_PER_PROJECT: int = config.app.tokenBudget
         self.MAX_LLM_CALLS_PER_PROJECT: int = config.app.maxLLMCallsPerProject
+        self.MAX_CONCURRENT_LLM_CALLS: int = config.app.maxConcurrentCalls
 
         # database — 从 POSTGRES_* 组件构建，json 中的 url 留空即可
         self.DATABASE_URL: str = config.database.url or _build_database_url()
@@ -83,6 +84,25 @@ class Settings:
         logging.getLogger().setLevel(
             getattr(logging, self.LOG_LEVEL.upper(), logging.INFO)
         )
+
+        # P1-6: 启动边界校验——空 key 一次性 WARNING（不做请求级重复校验）
+        if not self.API_KEY or self.API_KEY == "changeme":
+            logging.warning(
+                "⚠ API_KEY 未配置或仍为默认值（changeme）——"
+                "全部业务请求将以 403 fail-closed 拒绝。"
+                "请在 .env 中设置真实 API_KEY。"
+            )
+        if not self.LLM_API_KEY or self.LLM_API_KEY == "your-llm-api-key":
+            logging.warning(
+                "⚠ LLM_API_KEY 未配置——LLM 审计将走降级落库"
+                "（空 key 不崩但无真实审计结果）。"
+                "请在 .env 中设置真实 LLM_API_KEY。"
+            )
+
+    @property
+    def LLM_API_KEY(self) -> str:
+        """从环境变量读取 LLM_API_KEY（不在 solidguard.json 中明文存储）。"""
+        return os.environ.get("LLM_API_KEY", "")
 
     @property
     def MAX_UPLOAD_SIZE(self) -> int:

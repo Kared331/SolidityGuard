@@ -22,6 +22,7 @@ from app.services.engine.base import BaseEngine
 from app.llm.security.input_sanitizer import InputSanitizer
 from app.llm.sync_wrapper import chat_completion
 from app.llm.budget.token_budget import token_budget
+from app.llm.provider.base import describe_llm_error
 from app.config import settings
 
 logger = logging.getLogger("solidguard.services.engine.llm_audit")
@@ -443,14 +444,18 @@ class LLMAuditEngine(BaseEngine):
                         "gas_optimization": "",
                     })
                     continue
-            except (RuntimeError, ValueError, json.JSONDecodeError, httpx.HTTPError):
+            except (RuntimeError, ValueError, json.JSONDecodeError, httpx.HTTPError) as e:
+                # S4（P0-5）：失败原因可观测——异常分类复用 P0-2 的判别逻辑，
+                # 401/429/超时在日志与落库文案中可区分
+                error_desc = describe_llm_error(e)
                 self.logger.warning(
-                    "LLM audit call failed for %s.%s", contract_name, func_name,
+                    "LLM audit call failed for %s.%s: %s",
+                    contract_name, func_name, error_desc,
                 )
                 findings.append({
                     "contract_name": contract_name,
                     "function_name": func_name,
-                    "vulnerability_description": f"LLM audit failed for this function.",
+                    "vulnerability_description": f"LLM audit failed ({error_desc}).",
                     "severity": "unknown",
                     "suggested_fix": "",
                     "gas_optimization": "",
@@ -458,6 +463,19 @@ class LLMAuditEngine(BaseEngine):
                 continue
 
             for finding in parsed:
+                # P1-10 (S6): 落库前过 AuditFindingSchema 校验
+                # 非法条目（如 confidence 超界、severity 拼写偏差）丢弃并计数告警
+                try:
+                    from app.llm.schemas.audit_output import AuditFindingSchema
+
+                    AuditFindingSchema(**finding)
+                except Exception as ve:
+                    self.logger.warning(
+                        "LLM finding 被校验拒绝: %s.%s — 原因: %s | 样本: %s",
+                        contract_name, func_name, str(ve),
+                        str(finding)[:200],
+                    )
+                    continue
                 findings.append({
                     "contract_name": contract_name,
                     "function_name": func_name,

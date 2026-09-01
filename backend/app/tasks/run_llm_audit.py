@@ -18,6 +18,7 @@ from app.database import get_sync_session
 from app.models import LLMAuditResult, ProjectFile
 from app.services.engine.llm_audit import LLMAuditEngine
 from app.services.infra.storage import get_project_dir, get_project_file_path
+from app.llm.budget.token_budget import token_budget
 
 logger = logging.getLogger("solidguard.tasks.run_llm_audit")
 
@@ -43,6 +44,9 @@ def _truncate(value: str | None, key: str) -> str | None:
 @celery.task(name="run_llm_audit", bind=True)
 def run_llm_audit(self, project_id: int) -> None:
     try:
+        # P1-7: 从 Redis 载入既有累计 usage，使 check_budget 基线包含重启前消耗
+        token_budget.load_usage(project_id)
+
         with get_sync_session() as session:
             files = (
                 session.query(ProjectFile)
@@ -167,8 +171,10 @@ def run_llm_audit(self, project_id: int) -> None:
             "LLM audit completed for project %d: %d saved, %d skipped",
             project_id, saved, skipped,
         )
+        # P1-7: 任务结束一次性持久化累计 usage 到 Redis（不做逐调用写库）
+        token_budget.persist_usage(project_id)
 
-    except Exception as e:
+    except Exception:
+        # P0-5: FAILURE 态交由 Celery 原生标记（手动 update_state 破坏结果协议）
         logger.exception("LLM audit failed for project %d", project_id)
-        self.update_state(state="FAILURE", meta={"exc": str(e)})
         raise
