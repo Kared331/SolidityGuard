@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     SolidGuard 管理门户 — 一键启动 + 交互式配置管理
 .DESCRIPTION
@@ -49,10 +49,11 @@ function Test-Docker {
 }
 
 function Ensure-Config {
+    $created = $false
     if (-not (Test-Path $EnvFile)) {
         if (Test-Path $EnvExample) {
             Copy-Item $EnvExample $EnvFile
-            Write-Warn "已从 .env.example 创建 .env，请修改其中的 changeme 密码"
+            $created = $true
         } else {
             Write-Err ".env.example 不存在，无法创建 .env"
             exit 1
@@ -62,6 +63,83 @@ function Ensure-Config {
         if (Test-Path $JsonExample) {
             Copy-Item $JsonExample $JsonFile
             Write-Ok "已从 solidguard.json.example 创建 solidguard.json"
+        }
+    }
+    # 首次创建或残留 changeme 默认值 → 交互式引导填写凭据
+    if ($created) {
+        Invoke-EnvBootstrap -EnvExists:$false
+    } elseif (Test-EnvNeedsBootstrap) {
+        Write-Warn ".env 残留 changeme 默认值（数据库/Redis/API Key 未配置）"
+        $fix = Read-Host "是否现在引导修复？（输入 yes 确认）"
+        if ($fix -eq "yes") {
+            Invoke-EnvBootstrap -EnvExists:$true
+        }
+    }
+}
+
+# ── 首次配置引导 ────────────────────────────────────────────────
+function New-RandomSecret([int]$length = 24) {
+    # 仅字母数字，避免 env/YAML 引号转义问题
+    $chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789".ToCharArray()
+    $bytes = New-Object byte[] $length
+    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+    return -join ($bytes | ForEach-Object { $chars[$_ % $chars.Length] })
+}
+
+function Test-EnvNeedsBootstrap {
+    foreach ($key in @("POSTGRES_PASSWORD", "REDIS_PASSWORD", "API_KEY")) {
+        $v = Get-EnvValue $key
+        if (-not $v -or $v -eq "changeme") { return $true }
+    }
+    return $false
+}
+
+function Invoke-EnvBootstrap([bool]$EnvExists) {
+    Write-Title "首次配置引导"
+    if ($EnvExists) {
+        Write-Warn "检测到 .env 存在 changeme/空默认值，存在安全与可用性风险"
+        Write-Info "注意：若 postgres 数据卷已用旧密码初始化，改密码后需重建卷（会丢数据）"
+    } else {
+        Write-Info "已从 .env.example 创建 .env，下面引导填写关键凭据"
+    }
+    Write-Host "  提示：直接回车 = 使用随机生成值" -ForegroundColor Gray
+
+    # 1. 数据库密码
+    $pg = Read-Host "`nPostgreSQL 密码（回车=随机生成）"
+    if (-not $pg) { $pg = New-RandomSecret }
+    Set-EnvValue "POSTGRES_PASSWORD" $pg
+
+    # 2. Redis 密码
+    $redis = Read-Host "Redis 密码（回车=随机生成）"
+    if (-not $redis) { $redis = New-RandomSecret }
+    Set-EnvValue "REDIS_PASSWORD" $redis
+
+    # 3. API Key（前端容器通过 env 注入，此处展示便于调试）
+    $apiKey = Read-Host "API Key（回车=随机生成）"
+    if (-not $apiKey) { $apiKey = "sg-" + (New-RandomSecret 32) }
+    Set-EnvValue "API_KEY" $apiKey
+
+    # 4. LLM API Key（可选，空则审计走降级路径）
+    $llmKey = Read-Host "LLM API Key（可选，回车跳过）"
+    if ($llmKey) { Set-EnvValue "LLM_API_KEY" $llmKey }
+
+    Write-Ok "凭据已写入 .env"
+    Write-Host "  API Key: $apiKey" -ForegroundColor Yellow
+    Write-Host "  PostgreSQL / Redis 密码已生成（详见 .env）" -ForegroundColor Gray
+
+    # 已有数据卷时改数据库密码需重建
+    if ($EnvExists) {
+        $running = docker compose ps -q postgres 2>$null
+        if ($running) {
+            Write-Warn "postgres 容器已存在，旧密码初始化的卷需重建才能使用新密码"
+            $confirm = Read-Host "是否重建数据卷？（会丢失数据，输入 yes 确认）"
+            if ($confirm -eq "yes") {
+                docker compose down -v
+                Write-Ok "数据卷已清除，后续启动将用新密码初始化"
+            } else {
+                Write-Warn "跳过重建：postgres 仍是旧密码，api 将连接失败"
+                Write-Host "  -> 请稍后手动执行: docker compose down -v && .\manage.ps1 -Up" -ForegroundColor Gray
+            }
         }
     }
 }
@@ -173,8 +251,9 @@ function Invoke-Health {
     }
     $pgHealth = docker inspect --format='{{.State.Health.Status}}' solidguard-postgres-1 2>$null
     if ($pgHealth) { Write-Info "PostgreSQL: $pgHealth" }
-    $redisPing = docker exec solidguard-redis-1 redis-cli ping 2>$null
-    if ($redisPing) { Write-Info "Redis: $redisPing" }
+    $redisPass = Get-EnvValue "REDIS_PASSWORD"
+    $redisPing = docker exec solidguard-redis-1 redis-cli -a $redisPass --no-auth-warning ping 2>$null
+    if ($redisPing) { Write-Info "Redis: $redisPing" } else { Write-Err "Redis: ping 失败" }
 }
 
 # ── P2-6: 环境自检（S9）──────────────────────────────────────────

@@ -37,6 +37,7 @@ SolidGuard 是一个集**静态分析**、**模糊测试**与 **LLM 深度审计
 cd D:\SolidGuard
 .\manage.ps1                 # 交互菜单
 .\manage.ps1 -Up             # 直接启动服务
+# 首次运行自动进入配置引导：回车即随机生成数据库/Redis 密码与 API Key，无需手动改 .env
 ```
 
 ```bash
@@ -94,7 +95,7 @@ cd D:\SolidGuard
 .\manage.ps1 -Health      # Health check
 ```
 
-The script handles Docker detection, config bootstrap, container build/start, PostgreSQL health wait, and access info display.
+The script handles Docker detection, config bootstrap, container build/start, PostgreSQL health wait, and access info display. On first run (or when `changeme` defaults remain), an interactive wizard guides credential setup — press Enter to auto-generate random passwords/API keys, so the first startup is a single closed-loop command with no manual `.env` editing.
 
 ### Option B: Docker Compose (Cross-Platform)
 

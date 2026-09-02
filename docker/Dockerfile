@@ -5,7 +5,11 @@ WORKDIR /build
 
 COPY backend/requirements.txt .
 
+# torch 钉死 CPU-only 轮子（+cpu 本地版本仅存在于 PyTorch CPU 索引，
+# 避免 PyPI 默认 CUDA 轮子拉取 ~3GB nvidia 依赖；升级 torch 时同步改此版本号）
 RUN pip install --no-cache-dir --prefix=/install \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    torch==2.13.0+cpu \
     -r requirements.txt \
     sentence-transformers \
     slither-analyzer
