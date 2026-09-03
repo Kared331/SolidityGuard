@@ -18,7 +18,11 @@ export function useVulnerabilities(search?: string) {
       ? queryKeys.vulnerabilities.search(search)
       : queryKeys.vulnerabilities.all,
     queryFn: async () => {
-      const params = search ? { search } : {};
+      // page_size 显式拉全量（后端上限 100）：列表当前在本地做分页，
+      // 不传则后端默认只回第一页 20 条，超出部分永远不可见
+      const params = search
+        ? { search, page_size: 100 }
+        : { page_size: 100 };
       const { data } = await client.get<VulnerabilityPaginatedResponse>(
         '/v1/vulnerabilities',
         { params },

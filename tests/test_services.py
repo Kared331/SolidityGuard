@@ -25,7 +25,7 @@ class TestCreateProjectWithFiles:
     @patch("app.services.project_service.get_project_dir", return_value="/tmp/test_project")
     @patch("builtins.open", MagicMock())
     @patch("os.makedirs")
-    @patch("os.path.realpath", side_effect=lambda p: p)
+    @patch("os.path.realpath", side_effect=lambda p, **kwargs: p)
     async def test_create_project_with_sol_file(
         self, mock_makedirs, mock_get_dir, mock_process, mock_db
     ):

@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Input, Select, Table, Icon } from '../../design-system';
 import type { TableColumn, PaginationConfig, SelectOption } from '../../design-system';
 import { useVulnerabilities } from '../../api/hooks/useVulnerabilities';
@@ -51,7 +51,7 @@ export default function VulnerabilitiesPage() {
   const filteredData = useMemo(() => {
     if (severityFilter === 'all') return vulnerabilities;
     return vulnerabilities.filter(
-      (v) => v.severity.toLowerCase() === severityFilter
+      (v) => (v.severity ?? '').toLowerCase() === severityFilter
     );
   }, [vulnerabilities, severityFilter]);
 

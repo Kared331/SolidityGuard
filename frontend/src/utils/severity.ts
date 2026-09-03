@@ -10,20 +10,21 @@ export type Severity = keyof typeof SEVERITY_CONFIG;
 
 export type TagVariant = 'neutral' | 'brand' | 'critical' | 'high' | 'medium' | 'low' | 'info' | 'success';
 
-export function toSeverityTagVariant(severity: string): TagVariant {
-  const key = severity.toLowerCase();
+export function toSeverityTagVariant(severity: string | null | undefined): TagVariant {
+  const key = (severity ?? '').toLowerCase();
   if (key === 'informational') return 'info';
   if (SEVERITY_CONFIG[key as Severity]) return key as TagVariant;
   return 'neutral';
 }
 
-export function getSeverityConfig(severity: string) {
-  const key = severity.toLowerCase() as Severity;
-  return SEVERITY_CONFIG[key] ?? { color: 'var(--ds-color-neutral-500)', bg: 'var(--ds-color-neutral-100)', border: 'var(--ds-color-neutral-200)', label: severity, rank: 0 };
+export function getSeverityConfig(severity: string | null | undefined) {
+  const key = ((severity ?? '') as string).toLowerCase() as Severity;
+  const label = severity || '未分级';
+  return SEVERITY_CONFIG[key] ?? { color: 'var(--ds-color-neutral-500)', bg: 'var(--ds-color-neutral-100)', border: 'var(--ds-color-neutral-200)', label, rank: 0 };
 }
 
-export function severityRank(severity: string): number {
-  return getSeverityConfig(severity).rank;
+export function severityRank(severity: string | null | undefined): number {
+  return getSeverityConfig(severity ?? '').rank;
 }
 
 export const SEVERITY_ORDER: Severity[] = ['critical', 'high', 'medium', 'low', 'informational'];

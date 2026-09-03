@@ -92,7 +92,7 @@ class TestProjectUpload:
     @patch("app.services.project_service.get_project_dir", return_value="/tmp/test_proj")
     @patch("os.makedirs")
     @patch("builtins.open", MagicMock())
-    @patch("os.path.realpath", side_effect=lambda p: p)
+    @patch("os.path.realpath", side_effect=lambda p, **kwargs: p)
     def test_upload_valid_sol_file(
         self, mock_realpath, mock_makedirs, mock_get_dir, mock_process, app_client
     ):
@@ -126,7 +126,7 @@ class TestProjectUpload:
     @patch("app.services.project_service.get_project_dir", return_value="/tmp/test_proj")
     @patch("os.makedirs")
     @patch("builtins.open", MagicMock())
-    @patch("os.path.realpath", side_effect=lambda p: p)
+    @patch("os.path.realpath", side_effect=lambda p, **kwargs: p)
     def test_upload_returns_project_response(
         self, mock_realpath, mock_makedirs, mock_get_dir, mock_process, app_client
     ):
