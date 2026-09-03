@@ -20,6 +20,7 @@ P1-1 任务幂等：
     from app.services.task_dispatcher import set_task_dispatcher
     set_task_dispatcher(MockDispatcher())
 """
+
 from __future__ import annotations
 
 import logging
@@ -34,10 +35,7 @@ class TaskAlreadyRunning(Exception):
     def __init__(self, project_id: int, task_type: str):
         self.project_id = project_id
         self.task_type = task_type
-        super().__init__(
-            f"项目 {project_id} 已有 {task_type} 任务在运行中，"
-            f"请等待当前任务完成后再触发"
-        )
+        super().__init__(f"项目 {project_id} 已有 {task_type} 任务在运行中，请等待当前任务完成后再触发")
 
 
 @runtime_checkable
@@ -131,37 +129,33 @@ class CeleryTaskDispatcher:
         if _has_active_task(project_id, "analysis"):
             raise TaskAlreadyRunning(project_id, "analyze")
         from app.tasks.pipeline import build_analysis_pipeline
-        result = _apply_with_connection(
-            lambda conn: build_analysis_pipeline(project_id).apply_async(connection=conn)
-        )
+
+        result = _apply_with_connection(lambda conn: build_analysis_pipeline(project_id).apply_async(connection=conn))
         return result.id
 
     def dispatch_fuzz(self, project_id: int) -> str:
         if _has_active_task(project_id, "fuzz"):
             raise TaskAlreadyRunning(project_id, "fuzz")
         from app.tasks.pipeline import build_fuzz_pipeline
-        result = _apply_with_connection(
-            lambda conn: build_fuzz_pipeline(project_id).apply_async(connection=conn)
-        )
+
+        result = _apply_with_connection(lambda conn: build_fuzz_pipeline(project_id).apply_async(connection=conn))
         return result.id
 
     def dispatch_llm_audit(self, project_id: int) -> str:
         if _has_active_task(project_id, "llm_audit"):
             raise TaskAlreadyRunning(project_id, "llm-audit")
         from app.tasks.pipeline import build_llm_audit_pipeline
-        result = _apply_with_connection(
-            lambda conn: build_llm_audit_pipeline(project_id).apply_async(connection=conn)
-        )
+
+        result = _apply_with_connection(lambda conn: build_llm_audit_pipeline(project_id).apply_async(connection=conn))
         return result.id
 
     def dispatch_report(self, project_id: int, output_format: str) -> str:
         if _has_active_task(project_id, "report"):
             raise TaskAlreadyRunning(project_id, "report")
         from app.tasks.pipeline import build_report_pipeline
+
         result = _apply_with_connection(
-            lambda conn: build_report_pipeline(
-                project_id, output_format
-            ).apply_async(connection=conn)
+            lambda conn: build_report_pipeline(project_id, output_format).apply_async(connection=conn)
         )
         return result.id
 

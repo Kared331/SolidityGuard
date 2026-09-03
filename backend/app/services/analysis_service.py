@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AnalysisResult, Detection, FalsePositiveFeedback, Project
+from app.services.task_dispatcher import TaskAlreadyRunning, get_task_dispatcher
 from app.state.project_state import ProjectStatus
-from app.services.task_dispatcher import get_task_dispatcher, TaskAlreadyRunning
-
-from fastapi import HTTPException
 
 
 async def trigger_analysis(db: AsyncSession, project_id: int) -> str:
@@ -22,7 +21,7 @@ async def trigger_analysis(db: AsyncSession, project_id: int) -> str:
     try:
         return dispatcher.dispatch_analysis(project_id)
     except TaskAlreadyRunning as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
 
 async def list_analyses_filtered(db: AsyncSession, project_id: int) -> list[Detection]:
@@ -38,8 +37,7 @@ async def list_analyses_filtered(db: AsyncSession, project_id: int) -> list[Dete
     all_detections = result.scalars().all()
 
     fp_result = await db.execute(
-        select(FalsePositiveFeedback.detection_ref)
-        .where(FalsePositiveFeedback.project_id == project_id)
+        select(FalsePositiveFeedback.detection_ref).where(FalsePositiveFeedback.project_id == project_id)
     )
     fp_refs = set(fp_result.scalars().all())
 

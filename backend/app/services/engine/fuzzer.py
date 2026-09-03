@@ -1,7 +1,7 @@
+import logging
 import os
 import re
 import subprocess
-import logging
 from pathlib import Path
 
 from app.services.engine.base import BaseEngine
@@ -28,7 +28,9 @@ def _find_contract_info(project_dir: str) -> list[dict]:
                 continue
             contract_name = contract_match.group(1)
 
-            func_pattern = r"function\s+(\w+)\s*\([^)]*\)[^{]*(?:external|public)[^{]*\{|function\s+(\w+)\s*\([^)]*\)[^{]*\{"
+            func_pattern = (
+                r"function\s+(\w+)\s*\([^)]*\)[^{]*(?:external|public)[^{]*\{|function\s+(\w+)\s*\([^)]*\)[^{]*\{"
+            )
             functions = []
             for m in re.finditer(func_pattern, content):
                 fname_match = m.group(1) or m.group(2)
@@ -37,11 +39,13 @@ def _find_contract_info(project_dir: str) -> list[dict]:
                 functions.append(fname_match)
 
             if functions:
-                contracts.append({
-                    "name": contract_name,
-                    "file": fpath,
-                    "functions": functions[:10],
-                })
+                contracts.append(
+                    {
+                        "name": contract_name,
+                        "file": fpath,
+                        "functions": functions[:10],
+                    }
+                )
     return contracts
 
 
@@ -83,11 +87,11 @@ def _generate_fuzz_test(contracts: list[dict], test_dir: str) -> str:
             test_body.append(f"    function testFuzz_{cname}_{func}(uint256 x) public {{")
             test_body.append(f"        // Fuzz test for {cname}.{func}")
             test_body.append(f"        try {var_name}.{func}(x) {{")
-            test_body.append(f"            // Function accepted the input")
-            test_body.append(f"        }} catch {{")
-            test_body.append(f"            // Function reverted - this is expected for some inputs")
-            test_body.append(f"        }}")
-            test_body.append(f"    }}")
+            test_body.append("            // Function accepted the input")
+            test_body.append("        } catch {")
+            test_body.append("            // Function reverted - this is expected for some inputs")
+            test_body.append("        }")
+            test_body.append("    }")
             test_body.append("")
 
     if test_count == 0:
@@ -101,9 +105,7 @@ def _generate_fuzz_test(contracts: list[dict], test_dir: str) -> str:
 
     content = "\n".join(imports + test_body)
     Path(fuzz_test_path).write_text(content, encoding="utf-8")
-    logger.info(
-        "Generated fuzz test with %d test cases at %s", test_count, fuzz_test_path
-    )
+    logger.info("Generated fuzz test with %d test cases at %s", test_count, fuzz_test_path)
     return fuzz_test_path
 
 
@@ -119,7 +121,7 @@ class FuzzerEngine(BaseEngine):
 
             has_test_files = False
             if os.path.isdir(test_dir):
-                for root, _, files in os.walk(test_dir):
+                for _, _, files in os.walk(test_dir):
                     for fname in files:
                         if fname.endswith(".sol"):
                             has_test_files = True

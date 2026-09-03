@@ -15,20 +15,14 @@ class TokenBudgetManager:
 
     max_tokens_per_project: int = 500_000
     max_llm_calls_per_project: int = 100
-    project_usage: dict = field(
-        default_factory=lambda: defaultdict(
-            lambda: {"tokens": 0, "calls": 0}
-        )
-    )
+    project_usage: dict = field(default_factory=lambda: defaultdict(lambda: {"tokens": 0, "calls": 0}))
 
     def check_budget(self, project_id: int) -> bool:
         """Return True if the project has budget remaining."""
         usage = self.project_usage[project_id]
         if usage["calls"] >= self.max_llm_calls_per_project:
             return False
-        if usage["tokens"] >= self.max_tokens_per_project:
-            return False
-        return True
+        return not usage["tokens"] >= self.max_tokens_per_project
 
     def record_usage(self, project_id: int, usage: dict) -> None:
         """Record token consumption from an LLM call."""

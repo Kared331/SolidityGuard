@@ -66,38 +66,28 @@ def cleanup_old_files(self):
                             # Delete in correct order to respect FK constraints
                             # 1. Delete detections (FK → analysis_results)
                             analysis_ids = [
-                                r.id for r in session.query(AnalysisResult.id)
-                                .filter(AnalysisResult.project_id == project_id).all()
+                                r.id
+                                for r in session.query(AnalysisResult.id)
+                                .filter(AnalysisResult.project_id == project_id)
+                                .all()
                             ]
                             if analysis_ids:
-                                session.query(Detection).filter(
-                                    Detection.analysis_result_id.in_(analysis_ids)
-                                ).delete(synchronize_session="fetch")
+                                session.query(Detection).filter(Detection.analysis_result_id.in_(analysis_ids)).delete(
+                                    synchronize_session="fetch"
+                                )
 
                             # 2. Delete analysis results, fuzz results, llm audit results, reports, FP
-                            session.query(AnalysisResult).filter(
-                                AnalysisResult.project_id == project_id
-                            ).delete()
-                            session.query(FuzzingResult).filter(
-                                FuzzingResult.project_id == project_id
-                            ).delete()
-                            session.query(LLMAuditResult).filter(
-                                LLMAuditResult.project_id == project_id
-                            ).delete()
-                            session.query(Report).filter(
-                                Report.project_id == project_id
-                            ).delete()
+                            session.query(AnalysisResult).filter(AnalysisResult.project_id == project_id).delete()
+                            session.query(FuzzingResult).filter(FuzzingResult.project_id == project_id).delete()
+                            session.query(LLMAuditResult).filter(LLMAuditResult.project_id == project_id).delete()
+                            session.query(Report).filter(Report.project_id == project_id).delete()
                             session.query(FalsePositiveFeedback).filter(
                                 FalsePositiveFeedback.project_id == project_id
                             ).delete()
 
                             # 3. Delete project files and project
-                            session.query(ProjectFile).filter(
-                                ProjectFile.project_id == project_id
-                            ).delete()
-                            session.query(Project).filter(
-                                Project.id == project_id
-                            ).delete()
+                            session.query(ProjectFile).filter(ProjectFile.project_id == project_id).delete()
+                            session.query(Project).filter(Project.id == project_id).delete()
                             session.commit()
                     except Exception as e:
                         logger.exception("Failed to clean DB records for project %d: %s", project_id, e)

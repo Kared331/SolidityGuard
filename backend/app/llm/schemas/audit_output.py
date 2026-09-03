@@ -2,31 +2,23 @@
 Pydantic schemas for LLM audit output validation.
 Used to validate and parse LLM JSON responses.
 """
+
+from typing import Literal
+
 from pydantic import BaseModel, Field
-from typing import Optional, Literal
 
 
 class AuditFindingSchema(BaseModel):
     """Schema for a single audit finding from LLM output."""
 
-    vulnerability_description: str = Field(
-        ..., description="Detailed explanation of the vulnerability"
-    )
+    vulnerability_description: str = Field(..., description="Detailed explanation of the vulnerability")
     severity: Literal["Critical", "High", "Medium", "Low", "Informational"] = Field(
         ..., description="Vulnerability severity level"
     )
-    impact: str = Field(
-        ..., description="Concrete description of what an attacker could achieve"
-    )
-    suggested_fix: str = Field(
-        ..., description="Specific code changes to fix the vulnerability"
-    )
-    gas_optimization: Optional[str] = Field(
-        None, description="Optional gas optimization suggestion"
-    )
-    confidence: float = Field(
-        ..., ge=0.0, le=1.0, description="Confidence score 0.0-1.0"
-    )
+    impact: str = Field(..., description="Concrete description of what an attacker could achieve")
+    suggested_fix: str = Field(..., description="Specific code changes to fix the vulnerability")
+    gas_optimization: str | None = Field(None, description="Optional gas optimization suggestion")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score 0.0-1.0")
 
 
 class ContractSummarySchema(BaseModel):
@@ -46,4 +38,4 @@ class AuditBatchResult(BaseModel):
     function_name: str
     contract_name: str
     findings: list[AuditFindingSchema] = Field(default_factory=list)
-    error: Optional[str] = None
+    error: str | None = None

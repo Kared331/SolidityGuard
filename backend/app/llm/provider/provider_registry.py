@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from .base import AbstractLLMProvider
 
@@ -13,14 +12,14 @@ class ProviderRegistry:
 
     def __init__(self):
         self._providers: dict[str, AbstractLLMProvider] = {}
-        self._default_name: Optional[str] = None
+        self._default_name: str | None = None
 
     def register(self, name: str, provider: AbstractLLMProvider, default: bool = False):
         self._providers[name] = provider
         if default or self._default_name is None:
             self._default_name = name
 
-    def get(self, name: Optional[str] = None) -> AbstractLLMProvider:
+    def get(self, name: str | None = None) -> AbstractLLMProvider:
         if name and name in self._providers:
             return self._providers[name]
         if self._default_name and self._default_name in self._providers:
@@ -39,8 +38,8 @@ class ProviderRegistry:
         Args:
             config: SolidGuardConfig 实例，包含 providers 字典
         """
-        from .openai_provider import OpenAIProvider
         from .anthropic_provider import AnthropicProvider
+        from .openai_provider import OpenAIProvider
 
         _api_mapping: dict[str, type[AbstractLLMProvider]] = {
             "openai": OpenAIProvider,
@@ -51,9 +50,7 @@ class ProviderRegistry:
             api_type = provider_config.api
             provider_cls = _api_mapping.get(api_type)
             if provider_cls is None:
-                logger.warning(
-                    "跳过未知 api 类型的 Provider: name=%s, api=%s", name, api_type
-                )
+                logger.warning("跳过未知 api 类型的 Provider: name=%s, api=%s", name, api_type)
                 continue
             provider = provider_cls(provider_config)
             is_default = name == "default"
@@ -63,7 +60,7 @@ class ProviderRegistry:
 
 # --- 延迟初始化单例 ---
 
-_provider_registry_instance: Optional[ProviderRegistry] = None
+_provider_registry_instance: ProviderRegistry | None = None
 
 
 def get_provider_registry() -> ProviderRegistry:

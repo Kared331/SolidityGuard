@@ -7,6 +7,7 @@
 并行度：max_workers=5，与 embedding API 的 Semaphore(5) 对齐，
 避免过度并发触发 API rate limit。
 """
+
 from __future__ import annotations
 
 import logging
@@ -15,10 +16,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app.celery_app import celery
 from app.database import get_sync_session
+from app.llm.budget.token_budget import token_budget
 from app.models import LLMAuditResult, ProjectFile
 from app.services.engine.llm_audit import LLMAuditEngine
-from app.services.infra.storage import get_project_dir, get_project_file_path
-from app.llm.budget.token_budget import token_budget
+from app.services.infra.storage import get_project_file_path
 
 logger = logging.getLogger("solidguard.tasks.run_llm_audit")
 
@@ -48,11 +49,7 @@ def run_llm_audit(self, project_id: int) -> None:
         token_budget.load_usage(project_id)
 
         with get_sync_session() as session:
-            files = (
-                session.query(ProjectFile)
-                .filter(ProjectFile.project_id == project_id)
-                .all()
-            )
+            files = session.query(ProjectFile).filter(ProjectFile.project_id == project_id).all()
 
             file_paths = []
             for pf in files:
@@ -92,7 +89,10 @@ def run_llm_audit(self, project_id: int) -> None:
             with ThreadPoolExecutor(max_workers=MAX_PARALLEL_FILES) as executor:
                 future_to_file = {
                     executor.submit(
-                        engine.execute_single_file, project_id, file_id, abs_path,
+                        engine.execute_single_file,
+                        project_id,
+                        file_id,
+                        abs_path,
                     ): (file_id, abs_path)
                     for file_id, abs_path in file_paths
                 }
@@ -107,12 +107,17 @@ def run_llm_audit(self, project_id: int) -> None:
                     except Exception:
                         logger.exception(
                             "文件级并行审计失败: project_id=%d, file_id=%d, path=%s",
-                            project_id, file_id, abs_path,
+                            project_id,
+                            file_id,
+                            abs_path,
                         )
 
             logger.info(
                 "文件级并行审计完成: %d files, %d functions, %d findings（%d 并行线程）",
-                len(file_paths), functions_audited, len(all_findings), MAX_PARALLEL_FILES,
+                len(file_paths),
+                functions_audited,
+                len(all_findings),
+                MAX_PARALLEL_FILES,
             )
 
         # ── 批量写入：单 session + 单 commit ──────────────────────
@@ -147,11 +152,13 @@ def run_llm_audit(self, project_id: int) -> None:
                     session.commit()
                     logger.info(
                         "批量写入 LLM 审计结果: %d saved, %d skipped（单次 commit）",
-                        saved, skipped,
+                        saved,
+                        skipped,
                     )
                 except Exception:
                     logger.exception(
-                        "批量 commit 失败，回滚所有 finding（project_id=%d）", project_id,
+                        "批量 commit 失败，回滚所有 finding（project_id=%d）",
+                        project_id,
                     )
                     session.rollback()
                     skipped = saved
@@ -169,7 +176,9 @@ def run_llm_audit(self, project_id: int) -> None:
         )
         logger.info(
             "LLM audit completed for project %d: %d saved, %d skipped",
-            project_id, saved, skipped,
+            project_id,
+            saved,
+            skipped,
         )
         # P1-7: 任务结束一次性持久化累计 usage 到 Redis（不做逐调用写库）
         token_budget.persist_usage(project_id)

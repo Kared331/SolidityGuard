@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AnalysisResult, Detection, FalsePositiveFeedback
 
-from fastapi import HTTPException
 
-
-async def mark_false_positive(db: AsyncSession, detection_id: int, user_note: str | None = None) -> FalsePositiveFeedback:
+async def mark_false_positive(
+    db: AsyncSession, detection_id: int, user_note: str | None = None
+) -> FalsePositiveFeedback:
     detection = await db.get(Detection, detection_id)
     if not detection:
         raise HTTPException(status_code=404, detail="Detection not found")

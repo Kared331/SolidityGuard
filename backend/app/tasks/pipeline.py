@@ -1,10 +1,9 @@
 from celery import chain, group
 
-from app.tasks.run_slither import run_slither
+from app.tasks.generate_report import generate_report
 from app.tasks.run_fuzzer import run_fuzzer
 from app.tasks.run_llm_audit import run_llm_audit
-from app.tasks.generate_report import generate_report
-from app.tasks.process_upload import process_upload
+from app.tasks.run_slither import run_slither
 
 
 def build_analysis_pipeline(project_id: int):

@@ -1,4 +1,3 @@
-from typing import Optional
 from pydantic import BaseModel
 
 
@@ -14,5 +13,5 @@ class DetectionResponse(BaseModel):
     detection_ref: str
     check_name: str
     description: str
-    impact: Optional[str] = None
-    confidence: Optional[str] = None
+    impact: str | None = None
+    confidence: str | None = None

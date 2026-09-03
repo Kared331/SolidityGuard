@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import os
-import re
 import uuid
 from pathlib import Path
 
-from starlette.datastructures import UploadFile
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.datastructures import UploadFile
 
-from app.config import settings, logger
+from app.config import logger, settings
 from app.models import Project, ProjectFile
 from app.services.infra.storage import get_project_dir
 from app.services.task_dispatcher import _apply_with_connection
@@ -42,7 +41,7 @@ def _verify_magic_bytes(data: bytes, filename: str) -> bool:
     if lower.endswith(".tar.gz") or lower.endswith(".tgz"):
         return data[:2] == GZIP_MAGIC
     if lower.endswith(".tar"):
-        return data[TAR_MAGIC_OFFSET:TAR_MAGIC_OFFSET + 5] == TAR_MAGIC
+        return data[TAR_MAGIC_OFFSET : TAR_MAGIC_OFFSET + 5] == TAR_MAGIC
     if lower.endswith(".sol"):
         return True
     return True
@@ -68,7 +67,7 @@ async def create_project_with_files(db: AsyncSession, name: str | None, files: l
 
     for upload_file in files:
         if not upload_file.filename:
-            rejected_reasons.append(f"file missing filename")
+            rejected_reasons.append("file missing filename")
             continue
 
         _, ext = os.path.splitext(upload_file.filename)
@@ -84,7 +83,11 @@ async def create_project_with_files(db: AsyncSession, name: str | None, files: l
             rejected_reasons.append(reason)
             continue
 
-        if upload_file.size is not None and isinstance(upload_file.size, (int, float)) and upload_file.size > settings.MAX_UPLOAD_SIZE:
+        if (
+            upload_file.size is not None
+            and isinstance(upload_file.size, (int, float))
+            and upload_file.size > settings.MAX_UPLOAD_SIZE
+        ):
             reason = f"file size ({upload_file.size}) exceeds limit ({settings.MAX_UPLOAD_SIZE})"
             logger.warning("Rejected upload %s: %s", upload_file.filename, reason)
             rejected_reasons.append(reason)
@@ -125,9 +128,7 @@ async def create_project_with_files(db: AsyncSession, name: str | None, files: l
         raise HTTPException(status_code=422, detail=detail)
 
     # 显式连接发布（绕 celery producer pool 在线程内丢 hostname 的缺陷）
-    _apply_with_connection(
-        lambda conn: process_upload.apply_async(args=(project.id,), connection=conn)
-    )
+    _apply_with_connection(lambda conn: process_upload.apply_async(args=(project.id,), connection=conn))
     return project
 
 
@@ -141,9 +142,7 @@ async def get_project_files(db: AsyncSession, project_id: int) -> list[ProjectFi
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    result = await db.execute(
-        select(ProjectFile).where(ProjectFile.project_id == project_id)
-    )
+    result = await db.execute(select(ProjectFile).where(ProjectFile.project_id == project_id))
     return list(result.scalars().all())
 
 
@@ -152,4 +151,3 @@ async def get_project_or_404(db: AsyncSession, project_id: int) -> Project:
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return project
-

@@ -82,7 +82,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     try:
         if "multipart" in content_type.lower():
             form = await request.form()
-            body_preview = {k: f"<{type(v).__name__} name={getattr(v, 'filename', '?')} size={getattr(v, 'size', '?')}>" for k, v in form.items()}
+            body_preview = {
+                k: f"<{type(v).__name__} name={getattr(v, 'filename', '?')} size={getattr(v, 'size', '?')}>"
+                for k, v in form.items()
+            }
         else:
             body = await request.body()
             body_preview = body.decode("utf-8", errors="replace")[:500]
@@ -100,10 +103,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         status_code=422,
         content={
             "detail": "请求参数校验失败",
-            "errors": [
-                {"field": " -> ".join(str(loc) for loc in e["loc"]), "message": e["msg"]}
-                for e in errors
-            ],
+            "errors": [{"field": " -> ".join(str(loc) for loc in e["loc"]), "message": e["msg"]} for e in errors],
         },
     )
 

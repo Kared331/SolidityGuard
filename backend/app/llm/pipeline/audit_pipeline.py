@@ -6,22 +6,23 @@ Breakdown: Parse → Summarize → Extract Functions → For each function: Embe
 生产路径：app.services.engine.llm_audit.LLMAuditEngine（同步 Celery 任务）
 迁移计划：见 llm/pipeline/__init__.py 模块文档
 """
+
 import asyncio
+import contextlib
 import json
 import logging
-from typing import Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-from ..provider.base import AbstractLLMProvider, LLMResponse
-from ..provider.provider_registry import get_provider_registry
+from app.services.embedding import get_embedding
+
+from ..budget.token_budget import token_budget
 from ..prompts.registry import prompt_registry
+from ..provider.base import AbstractLLMProvider
+from ..provider.provider_registry import get_provider_registry
 from ..rag.retriever import vulnerability_retriever
+from ..schemas.prompt_context import FunctionContext
 from ..security.input_sanitizer import input_sanitizer
 from ..security.output_validator import output_validator
-from ..budget.token_budget import token_budget
-from ..provider.provider_stats import llm_observability
-from ..schemas.prompt_context import ContractContext, FunctionContext, AuditContext
-from app.services.embedding import get_embedding
 
 logger = logging.getLogger(__name__)
 
@@ -29,16 +30,17 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AuditProgress:
     """Progress tracking for SSE streaming."""
+
     phase: str  # 'parsing' | 'summarizing' | 'embedding' | 'rag_retrieval' | 'auditing' | 'complete'
-    current_file: Optional[str] = None
-    current_function: Optional[str] = None
+    current_file: str | None = None
+    current_function: str | None = None
     total_functions: int = 0
     completed_functions: int = 0
     findings_so_far: int = 0
 
 
 class AuditPipeline:
-    def __init__(self, provider: Optional[AbstractLLMProvider] = None):
+    def __init__(self, provider: AbstractLLMProvider | None = None):
         self._provider = provider
 
     @property
@@ -52,7 +54,7 @@ class AuditPipeline:
         project_id: int,
         contract_name: str,
         source_code: str,
-        progress_callback: Optional[callable] = None,
+        progress_callback: callable | None = None,
     ) -> list[dict]:
         """Run full audit pipeline on a single contract."""
         findings: list[dict] = []
@@ -88,14 +90,14 @@ class AuditPipeline:
             )
 
             # RAG retrieval
-            func_findings = await self._audit_function(
-                project_id, contract_name, func, summary_text, progress_callback
-            )
+            func_findings = await self._audit_function(project_id, contract_name, func, summary_text, progress_callback)
             findings.extend(func_findings)
 
         self._emit_progress(
             progress_callback,
-            AuditProgress(phase="complete", total_functions=total, completed_functions=total, findings_so_far=len(findings)),
+            AuditProgress(
+                phase="complete", total_functions=total, completed_functions=total, findings_so_far=len(findings)
+            ),
         )
         return findings
 
@@ -116,8 +118,12 @@ class AuditPipeline:
             return json.dumps({"contract_name": contract_name, "functions": []})
 
     async def _audit_function(
-        self, project_id: int, contract_name: str, func: FunctionContext, summary_text: str,
-        progress_callback: Optional[callable] = None,
+        self,
+        project_id: int,
+        contract_name: str,
+        func: FunctionContext,
+        summary_text: str,
+        progress_callback: callable | None = None,
     ) -> list[dict]:
         """Audit a single function with RAG context."""
         budget_ok, reason = token_budget.check_budget(project_id)
@@ -128,15 +134,17 @@ class AuditPipeline:
         # RAG retrieval: Embed function code → Query ChromaDB → Format context
         rag_context = "No similar vulnerability patterns found in knowledge base."
         try:
-            self._emit_progress(progress_callback, AuditProgress(
-                phase="embedding", current_file=contract_name, current_function=func.function_name
-            ))
+            self._emit_progress(
+                progress_callback,
+                AuditProgress(phase="embedding", current_file=contract_name, current_function=func.function_name),
+            )
             embedding_text = f"// Contract: {contract_name}\n{func.function_code}"
             embedding = await asyncio.to_thread(get_embedding, embedding_text)
 
-            self._emit_progress(progress_callback, AuditProgress(
-                phase="rag_retrieval", current_file=contract_name, current_function=func.function_name
-            ))
+            self._emit_progress(
+                progress_callback,
+                AuditProgress(phase="rag_retrieval", current_file=contract_name, current_function=func.function_name),
+            )
             results = await asyncio.to_thread(vulnerability_retriever.query, embedding)
             rag_context = vulnerability_retriever.format_rag_context(results)
             logger.debug("RAG context for %s.%s: %d chars", contract_name, func.function_name, len(rag_context))
@@ -169,8 +177,9 @@ class AuditPipeline:
     def _extract_functions(self, source_code: str) -> list[FunctionContext]:
         """Extract public/external functions using regex (fallback until AST extractor is ready)."""
         import re
+
         functions = []
-        pattern = r'function\s+(\w+)\s*\([^)]*\)\s*(public|external)\s*([^{]*)\{([^}]*)\}'
+        pattern = r"function\s+(\w+)\s*\([^)]*\)\s*(public|external)\s*([^{]*)\{([^}]*)\}"
         matches = re.findall(pattern, source_code, re.DOTALL)
 
         for match in matches:
@@ -179,25 +188,25 @@ class AuditPipeline:
             full_func = f"function {name}(...) {visibility} {modifiers_str}{{ {body[:3000]} }}"
 
             # Extract modifiers
-            modifier_pattern = r'\b(onlyOwner|onlyRole|whenNotPaused|nonReentrant|initializer)\b'
+            modifier_pattern = r"\b(onlyOwner|onlyRole|whenNotPaused|nonReentrant|initializer)\b"
             modifiers = re.findall(modifier_pattern, modifiers_str)
 
-            functions.append(FunctionContext(
-                function_name=name,
-                function_code=full_func,
-                modifiers=modifiers,
-                visibility=visibility,
-            ))
+            functions.append(
+                FunctionContext(
+                    function_name=name,
+                    function_code=full_func,
+                    modifiers=modifiers,
+                    visibility=visibility,
+                )
+            )
 
         return functions
 
     @staticmethod
     def _emit_progress(callback, progress: AuditProgress):
         if callback:
-            try:
+            with contextlib.suppress(Exception):
                 callback(progress)
-            except Exception:
-                pass
 
 
 audit_pipeline = AuditPipeline()

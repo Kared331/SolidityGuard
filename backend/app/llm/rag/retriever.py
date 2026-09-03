@@ -7,9 +7,10 @@ chroma_client，本模块保留作为 RAG 上下文格式化的演进储备。
 
 技术冗余：不删除，待后续 RAG 增强时迁移到此实现。
 """
-from typing import Optional
+
 import chromadb
 from chromadb import Collection
+
 from app.config import settings
 
 # Default persist directory
@@ -19,9 +20,9 @@ TOP_K = settings.RAG_TOP_K
 
 
 class VulnerabilityRetriever:
-    def __init__(self, persist_dir: Optional[str] = None):
+    def __init__(self, persist_dir: str | None = None):
         self._persist_dir = persist_dir or CHROMA_DIR
-        self._client: Optional[chromadb.PersistentClient] = None
+        self._client: chromadb.PersistentClient | None = None
 
     @property
     def client(self) -> chromadb.PersistentClient:
@@ -54,7 +55,7 @@ class VulnerabilityRetriever:
             return "No similar vulnerability patterns found in knowledge base."
 
         lines = ["## Similar Vulnerability Patterns (from SWC Knowledge Base):\n"]
-        for i, (doc, meta, dist) in enumerate(zip(documents, metadatas, distances), 1):
+        for i, (doc, meta, dist) in enumerate(zip(documents, metadatas, distances, strict=False), 1):
             relevance = "HIGH" if dist < 0.3 else "MEDIUM" if dist < 0.6 else "LOW"
             title = meta.get("title", "Unknown") if meta else "Unknown"
             severity = meta.get("severity", "") if meta else ""

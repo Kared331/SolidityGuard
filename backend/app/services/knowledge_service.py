@@ -11,9 +11,7 @@ def trigger_swc_sync() -> None:
     """发布 SWC 同步任务（显式连接，绕 producer pool hostname 丢失）。"""
     from app.tasks.sync_swc import sync_swc
 
-    _apply_with_connection(
-        lambda conn: sync_swc.apply_async(connection=conn)
-    )
+    _apply_with_connection(lambda conn: sync_swc.apply_async(connection=conn))
 
 
 async def search_vulnerabilities(

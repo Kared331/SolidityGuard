@@ -7,8 +7,8 @@ import logging
 
 import httpx
 
-from .base import AbstractLLMProvider, LLMResponse, llm_retry
 from ..config import ProviderConfig
+from .base import AbstractLLMProvider, LLMResponse, llm_retry
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +53,7 @@ class AnthropicProvider(AbstractLLMProvider):
             "max_tokens": max_tokens,
             "temperature": temperature,
             "system": system_prompt,
-            "messages": [
-                {"role": "user", "content": user_prompt}
-            ],
+            "messages": [{"role": "user", "content": user_prompt}],
         }
 
         logger.debug("Anthropic 请求: model=%s, max_tokens=%d", model_id, max_tokens)
@@ -77,9 +75,7 @@ class AnthropicProvider(AbstractLLMProvider):
             },
         )
 
-        logger.debug(
-            "Anthropic 响应: tokens=%d", result.usage["total_tokens"]
-        )
+        logger.debug("Anthropic 响应: tokens=%d", result.usage["total_tokens"])
         return result
 
     def get_model_name(self) -> str:
@@ -103,9 +99,7 @@ class AnthropicProvider(AbstractLLMProvider):
                     json={
                         "model": self._get_model_id(),
                         "max_tokens": 1,
-                        "messages": [
-                            {"role": "user", "content": "ping"}
-                        ],
+                        "messages": [{"role": "user", "content": "ping"}],
                     },
                 )
                 return response.status_code == 200

@@ -1,4 +1,5 @@
 """Health check for RAG components: Embedding + ChromaDB."""
+
 from .retriever import vulnerability_retriever
 
 

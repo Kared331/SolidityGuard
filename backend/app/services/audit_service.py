@@ -1,14 +1,12 @@
 from __future__ import annotations
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import LLMAuditResult, Project
+from app.services.task_dispatcher import TaskAlreadyRunning, get_task_dispatcher
 from app.state.project_state import ProjectStatus
-from app.services.task_dispatcher import get_task_dispatcher, TaskAlreadyRunning
-from app.tasks.pipeline import build_llm_audit_pipeline  # 保留：E2 技术冗余
-
-from fastapi import HTTPException
 
 
 async def trigger_llm_audit(db: AsyncSession, project_id: int) -> str:
@@ -22,7 +20,7 @@ async def trigger_llm_audit(db: AsyncSession, project_id: int) -> str:
     try:
         return dispatcher.dispatch_llm_audit(project_id)
     except TaskAlreadyRunning as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
 
 async def list_llm_audit_results(db: AsyncSession, project_id: int) -> list[LLMAuditResult]:
@@ -30,7 +28,5 @@ async def list_llm_audit_results(db: AsyncSession, project_id: int) -> list[LLMA
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    result = await db.execute(
-        select(LLMAuditResult).where(LLMAuditResult.project_id == project_id)
-    )
+    result = await db.execute(select(LLMAuditResult).where(LLMAuditResult.project_id == project_id))
     return list(result.scalars().all())

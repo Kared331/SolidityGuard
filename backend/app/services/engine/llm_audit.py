@@ -8,6 +8,7 @@
 
     详见：docs/architecture/llm-call-chain-blueprint.md
 """
+
 from __future__ import annotations
 
 import json
@@ -16,14 +17,15 @@ import os
 import re
 
 import httpx
+
+from app.config import settings
+from app.llm.budget.token_budget import token_budget
+from app.llm.provider.base import describe_llm_error
+from app.llm.security.input_sanitizer import InputSanitizer
+from app.llm.sync_wrapper import chat_completion
 from app.services.chroma_client import get_vulnerability_collection, query_vulnerabilities, query_vulnerabilities_batch
 from app.services.embedding import get_embedding, get_embedding_batch
 from app.services.engine.base import BaseEngine
-from app.llm.security.input_sanitizer import InputSanitizer
-from app.llm.sync_wrapper import chat_completion
-from app.llm.budget.token_budget import token_budget
-from app.llm.provider.base import describe_llm_error
-from app.config import settings
 
 logger = logging.getLogger("solidguard.services.engine.llm_audit")
 
@@ -157,10 +159,10 @@ def _parse_llm_json(text: str) -> list | None:
     # Stage 2: extract from markdown code block
     code_block = re.search(r"```(?:json)?\s*\n", trimmed)
     if code_block:
-        after_fence = trimmed[code_block.end():]
+        after_fence = trimmed[code_block.end() :]
         end_fence = re.search(r"\n```", after_fence)
         if end_fence:
-            block_content = after_fence[:end_fence.start()]
+            block_content = after_fence[: end_fence.start()]
             array_str = _extract_json_array(block_content)
             if array_str:
                 try:
@@ -196,7 +198,8 @@ def _parse_llm_json(text: str) -> list | None:
     sample = trimmed[:200].replace("\n", "\\n")
     logger.warning(
         "Failed to parse JSON from LLM response (length=%d, start=%s)",
-        len(text), sample,
+        len(text),
+        sample,
     )
     return None
 
@@ -320,7 +323,7 @@ class LLMAuditEngine(BaseEngine):
                     f'"severity": "...", "suggested_fix": "...", '
                     f'"gas_optimization": "..."}}]'
                 ),
-            }
+            },
         ]
 
         try:
@@ -328,53 +331,67 @@ class LLMAuditEngine(BaseEngine):
             token_budget.record_usage(project_id, usage.get("total_tokens", 0))
             parsed = _parse_llm_json(response_text)
             if parsed is None:
-                return [{
-                    "contract_name": contract_name,
-                    "function_name": func_name,
-                    "vulnerability_description": f"LLM audit returned unparseable response: {response_text[:300]}",
-                    "severity": "unknown",
-                    "suggested_fix": response_text[:500] if response_text else "",
-                    "gas_optimization": "",
-                }], True
+                return [
+                    {
+                        "contract_name": contract_name,
+                        "function_name": func_name,
+                        "vulnerability_description": f"LLM audit returned unparseable response: {response_text[:300]}",
+                        "severity": "unknown",
+                        "suggested_fix": response_text[:500] if response_text else "",
+                        "gas_optimization": "",
+                    }
+                ], True
         except (RuntimeError, ValueError, json.JSONDecodeError, httpx.HTTPError) as e:
             error_desc = describe_llm_error(e)
             self.logger.warning(
                 "LLM audit call failed for %s.%s: %s",
-                contract_name, func_name, error_desc,
+                contract_name,
+                func_name,
+                error_desc,
             )
-            return [{
-                "contract_name": contract_name,
-                "function_name": func_name,
-                "vulnerability_description": f"LLM audit failed ({error_desc}).",
-                "severity": "unknown",
-                "suggested_fix": "",
-                "gas_optimization": "",
-            }], True
+            return [
+                {
+                    "contract_name": contract_name,
+                    "function_name": func_name,
+                    "vulnerability_description": f"LLM audit failed ({error_desc}).",
+                    "severity": "unknown",
+                    "suggested_fix": "",
+                    "gas_optimization": "",
+                }
+            ], True
 
         out: list[dict] = []
         for finding in parsed:
             try:
                 from app.llm.schemas.audit_output import AuditFindingSchema
+
                 AuditFindingSchema(**finding)
             except Exception as ve:
                 self.logger.warning(
                     "LLM finding 被校验拒绝: %s.%s — 原因: %s | 样本: %s",
-                    contract_name, func_name, str(ve),
+                    contract_name,
+                    func_name,
+                    str(ve),
                     str(finding)[:200],
                 )
                 continue
-            out.append({
-                "contract_name": contract_name,
-                "function_name": func_name,
-                "vulnerability_description": finding.get("vulnerability_description", ""),
-                "severity": finding.get("severity", "unknown"),
-                "suggested_fix": finding.get("suggested_fix"),
-                "gas_optimization": finding.get("gas_optimization"),
-            })
+            out.append(
+                {
+                    "contract_name": contract_name,
+                    "function_name": func_name,
+                    "vulnerability_description": finding.get("vulnerability_description", ""),
+                    "severity": finding.get("severity", "unknown"),
+                    "suggested_fix": finding.get("suggested_fix"),
+                    "gas_optimization": finding.get("gas_optimization"),
+                }
+            )
         return out, True
 
     def execute_single_file(
-        self, project_id: int, file_id: int, abs_path: str,
+        self,
+        project_id: int,
+        file_id: int,
+        abs_path: str,
     ) -> dict:
         """处理单个文件的 LLM 审计（线程安全，可并行调用）。
 
@@ -393,7 +410,7 @@ class LLMAuditEngine(BaseEngine):
             return {"findings": [], "functions_audited": 0, "files_processed": 0}
 
         try:
-            with open(abs_path, "r", encoding="utf-8") as f:
+            with open(abs_path, encoding="utf-8") as f:
                 content = f.read()
         except OSError:
             return {"findings": [], "functions_audited": 0, "files_processed": 0}
@@ -404,14 +421,16 @@ class LLMAuditEngine(BaseEngine):
         # ── 生成 contract summary ──────────────────────────────────
         sanitized_content, injection_detected = InputSanitizer.sanitize_code(content)
         if injection_detected:
-            findings.append({
-                "contract_name": contract_name,
-                "function_name": "[INJECTION WARNING]",
-                "vulnerability_description": "Prompt injection detected and sanitized in contract source code.",
-                "severity": "warning",
-                "suggested_fix": "",
-                "gas_optimization": "",
-            })
+            findings.append(
+                {
+                    "contract_name": contract_name,
+                    "function_name": "[INJECTION WARNING]",
+                    "vulnerability_description": "Prompt injection detected and sanitized in contract source code.",
+                    "severity": "warning",
+                    "suggested_fix": "",
+                    "gas_optimization": "",
+                }
+            )
         summary_messages = [
             {
                 "role": "system",
@@ -431,7 +450,7 @@ class LLMAuditEngine(BaseEngine):
                     f'Output JSON: {{"interface": "...", "state_variables": [...], '
                     f'"functions": [...]}}'
                 ),
-            }
+            },
         ]
         try:
             summary_text, _ = chat_completion(summary_messages)
@@ -440,50 +459,49 @@ class LLMAuditEngine(BaseEngine):
             summary_text = None
 
         if not summary_text or len(summary_text.strip()) < 20:
-            summary_text = (
-                f"Contract: {contract_name}, "
-                f"contains {len(key_functions)} key function(s)."
-            )
+            summary_text = f"Contract: {contract_name}, contains {len(key_functions)} key function(s)."
 
         if not key_functions:
             return {"findings": findings, "functions_audited": 0, "files_processed": 1}
 
         # ── 文件内批量 embedding + 批量 RAG 检索 ───────────────────
-        embedding_texts = [
-            f"// Contract: {contract_name}\n{func['body']}"
-            for func in key_functions
-        ]
+        embedding_texts = [f"// Contract: {contract_name}\n{func['body']}" for func in key_functions]
 
         rag_contexts: list[str] = ["None found"] * len(key_functions)
         try:
             embeddings = get_embedding_batch(embedding_texts)
             collection = get_vulnerability_collection()
             batch_results = query_vulnerabilities_batch(
-                collection, embeddings, top_k=settings.RAG_TOP_K,
+                collection,
+                embeddings,
+                top_k=settings.RAG_TOP_K,
             )
             for i, query_result in enumerate(batch_results):
                 retrieved_docs = query_result.get("documents", [[]])[0]
                 retrieved_metas = query_result.get("metadatas", [[]])[0]
                 vuln_texts = []
-                for doc, meta in zip(retrieved_docs, retrieved_metas):
+                for doc, meta in zip(retrieved_docs, retrieved_metas, strict=False):
                     title = meta.get("title", "Unknown") if meta else "Unknown"
                     vuln_texts.append(f"- {title}: {doc}")
                 rag_contexts[i] = "\n".join(vuln_texts) or "None found"
         except (ValueError, httpx.HTTPError) as e:
             self.logger.warning(
-                "批量 embedding/RAG 失败（%s），回退到逐个处理", e,
+                "批量 embedding/RAG 失败（%s），回退到逐个处理",
+                e,
             )
             for i, emb_text in enumerate(embedding_texts):
                 try:
                     embedding = get_embedding(emb_text)
                     collection = get_vulnerability_collection()
                     query_result = query_vulnerabilities(
-                        collection, embedding, top_k=settings.RAG_TOP_K,
+                        collection,
+                        embedding,
+                        top_k=settings.RAG_TOP_K,
                     )
                     retrieved_docs = query_result.get("documents", [[]])[0]
                     retrieved_metas = query_result.get("metadatas", [[]])[0]
                     vuln_texts = []
-                    for doc, m in zip(retrieved_docs, retrieved_metas):
+                    for doc, m in zip(retrieved_docs, retrieved_metas, strict=False):
                         title = m.get("title", "Unknown") if m else "Unknown"
                         vuln_texts.append(f"- {title}: {doc}")
                     rag_contexts[i] = "\n".join(vuln_texts) or "None found"
@@ -495,16 +513,22 @@ class LLMAuditEngine(BaseEngine):
         # 大 N 并行（受全局 LLM Semaphore(5) 限制，参考基线场景 F 3.67x 潜力）
         if len(key_functions) > self._PARALLEL_FUNC_THRESHOLD:
             from concurrent.futures import ThreadPoolExecutor, as_completed
+
             self.logger.info(
                 "函数级并行启用: %s (%d functions > threshold %d)",
-                contract_name, len(key_functions), self._PARALLEL_FUNC_THRESHOLD,
+                contract_name,
+                len(key_functions),
+                self._PARALLEL_FUNC_THRESHOLD,
             )
             with ThreadPoolExecutor(max_workers=self._FUNC_PARALLELISM) as ex:
                 futures = {
                     ex.submit(
                         self._audit_single_function,
-                        project_id, contract_name, summary_text,
-                        func, rag_contexts[idx],
+                        project_id,
+                        contract_name,
+                        summary_text,
+                        func,
+                        rag_contexts[idx],
                     ): idx
                     for idx, func in enumerate(key_functions)
                 }
@@ -516,14 +540,18 @@ class LLMAuditEngine(BaseEngine):
                         findings.extend(func_findings)
                     except Exception:
                         self.logger.exception(
-                            "函数级并行审计失败: %s", contract_name,
+                            "函数级并行审计失败: %s",
+                            contract_name,
                         )
         else:
             # 串行路径（小 N 场景）
             for idx, func in enumerate(key_functions):
                 func_findings, audited = self._audit_single_function(
-                    project_id, contract_name, summary_text,
-                    func, rag_contexts[idx],
+                    project_id,
+                    contract_name,
+                    summary_text,
+                    func,
+                    rag_contexts[idx],
                 )
                 if audited:
                     functions_audited += 1
@@ -552,14 +580,16 @@ class LLMAuditEngine(BaseEngine):
         ok, reason = token_budget.check_budget(project_id)
         if not ok:
             return {
-                "audit_results": [{
-                    "contract_name": "BUDGET_EXCEEDED",
-                    "function_name": "",
-                    "vulnerability_description": "Token budget exceeded",
-                    "severity": "error",
-                    "suggested_fix": "",
-                    "gas_optimization": "",
-                }],
+                "audit_results": [
+                    {
+                        "contract_name": "BUDGET_EXCEEDED",
+                        "function_name": "",
+                        "vulnerability_description": "Token budget exceeded",
+                        "severity": "error",
+                        "suggested_fix": "",
+                        "gas_optimization": "",
+                    }
+                ],
                 "functions_audited": 0,
                 "files_processed": 0,
             }

@@ -1,14 +1,13 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
 
 import httpx
 from tenacity import (
     retry,
+    retry_if_exception,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception,
 )
 
 logger = logging.getLogger("solidguard.llm.provider.base")
@@ -86,7 +85,7 @@ class LLMCallRecord:
     latency_ms: int
     success: bool
     tokens_used: int
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class AbstractLLMProvider(ABC):

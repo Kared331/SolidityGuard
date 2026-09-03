@@ -4,6 +4,9 @@
 target-version = "py311"
 line-length = 120
 
+# Alembic 迁移为自动生成代码，不参与 lint/format
+exclude = ["backend/alembic"]
+
 [lint]
 select = [
     "E",    # pycodestyle errors
@@ -21,7 +24,6 @@ ignore = [
 
 [lint.per-file-ignores]
 "tests/*" = ["B", "SIM"]
-"alembic/*" = ["E", "W", "F"]
 
 [format]
 quote-style = "double"

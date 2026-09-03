@@ -1,8 +1,8 @@
 """
 Structured context passed to Prompt templates during audit execution.
 """
+
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
@@ -12,7 +12,7 @@ class ContractContext:
     contract_name: str
     source_code: str
     lines_of_code: int = 0
-    summary_json: Optional[str] = None  # JSON string of contract summary
+    summary_json: str | None = None  # JSON string of contract summary
 
 
 @dataclass

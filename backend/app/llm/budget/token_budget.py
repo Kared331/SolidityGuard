@@ -12,12 +12,12 @@ P1-7 (S1): 预算持久化。
     TokenBudget 在 worker 启动初始化时从 Redis 载入既有累计值，使
     check_budget 基线包含历史消耗。不做逐调用写库（避免写入放大）。
 """
+
 from __future__ import annotations
 
 import json
 import logging
 import threading
-from typing import Optional
 
 from app.config import settings
 
@@ -37,7 +37,7 @@ class TokenBudget:
         self._usage: dict[int, dict] = {}
         self._lock = threading.Lock()
 
-    def check_budget(self, project_id: int) -> tuple[bool, Optional[str]]:
+    def check_budget(self, project_id: int) -> tuple[bool, str | None]:
         with self._lock:
             usage = self._usage.get(project_id, {"tokens": 0, "calls": 0})
             if usage["calls"] >= self.max_calls:

@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class ProjectStatus(str, Enum):
+class ProjectStatus(StrEnum):
     UPLOADED = "uploaded"
     PROCESSING = "processing"
     READY = "ready"

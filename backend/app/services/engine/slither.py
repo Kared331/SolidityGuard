@@ -1,4 +1,4 @@
-﻿import json
+import json
 import os
 import subprocess
 
@@ -12,11 +12,8 @@ def _build_detection_ref(detector: dict) -> str:
         source_mapping = elements[0].get("source_mapping", {})
         filename = source_mapping.get("filename_relative", "")
         lines = source_mapping.get("lines", [])
-        if lines:
-            # Use range shorthand: "6-63" instead of "6-7-8-...-63"
-            lines_str = f"{lines[0]}-{lines[-1]}" if len(lines) > 1 else str(lines[0])
-        else:
-            lines_str = "[]"
+        # Use range shorthand: "6-63" instead of "6-7-8-...-63"
+        lines_str = (f"{lines[0]}-{lines[-1]}" if len(lines) > 1 else str(lines[0])) if lines else "[]"
         ref = f"{check}:{filename}:{lines_str}"
         # Truncate to fit VARCHAR(500)
         if len(ref) > 490:
@@ -26,9 +23,11 @@ def _build_detection_ref(detector: dict) -> str:
 
 
 _FRAMEWORK_FILES = [
-    "hardhat.config.js", "hardhat.config.ts",
+    "hardhat.config.js",
+    "hardhat.config.ts",
     "foundry.toml",
-    "truffle-config.js", "truffle-config.ts",
+    "truffle-config.js",
+    "truffle-config.ts",
 ]
 _DEP_DIRS = {"lib", "node_modules", "out", "cache", ".git", "test", "script", "artifacts"}
 
@@ -57,10 +56,7 @@ def _needs_solc_fallback(project_root: str) -> bool:
     """Check if solc fallback is needed: Hardhat without npm deps, or no framework at all."""
     if not _has_framework_config(project_root):
         return True  # No framework config, use solc directly
-    has_hardhat = any(
-        os.path.isfile(os.path.join(project_root, f))
-        for f in ["hardhat.config.js", "hardhat.config.ts"]
-    )
+    has_hardhat = any(os.path.isfile(os.path.join(project_root, f)) for f in ["hardhat.config.js", "hardhat.config.ts"])
     if has_hardhat:
         has_deps = os.path.isdir(os.path.join(project_root, "node_modules"))
         if not has_deps:
@@ -87,7 +83,9 @@ def _run_slither_file(sol_file: str, timeout: int = 90) -> dict:
     try:
         proc = subprocess.run(
             ["slither", sol_file, "--compile-force-framework", "solc", "--json", "-"],
-            capture_output=True, text=True, timeout=timeout,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
         )
         if proc.stdout.strip():
             return json.loads(proc.stdout)
@@ -105,7 +103,9 @@ def _run_slither_dir(project_dir: str, timeout: int = 300) -> dict:
     try:
         proc = subprocess.run(
             ["slither", project_dir, "--json", "-"],
-            capture_output=True, text=True, timeout=timeout,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
         )
         if proc.stdout.strip():
             return json.loads(proc.stdout)
@@ -133,7 +133,8 @@ class SlitherEngine(BaseEngine):
                 sol_files = _collect_sol_files(root)
                 self.logger.info(
                     "Project %d: Hardhat without node_modules, analyzing %d files with solc",
-                    project_id, len(sol_files),
+                    project_id,
+                    len(sol_files),
                 )
                 for sf in sol_files:
                     self.logger.info("  Slither solc: %s", sf)
@@ -153,14 +154,16 @@ class SlitherEngine(BaseEngine):
         for det in all_detectors:
             detection_ref = _build_detection_ref(det)
             elements = det.get("elements", [])
-            detections.append({
-                "detection_ref": detection_ref,
-                "check_name": det.get("check", "unknown"),
-                "description": det.get("description", ""),
-                "impact": det.get("impact"),
-                "confidence": det.get("confidence"),
-                "element_json": elements if elements else None,
-            })
+            detections.append(
+                {
+                    "detection_ref": detection_ref,
+                    "check_name": det.get("check", "unknown"),
+                    "description": det.get("description", ""),
+                    "impact": det.get("impact"),
+                    "confidence": det.get("confidence"),
+                    "element_json": elements if elements else None,
+                }
+            )
 
         return {
             "raw_result": first_result,

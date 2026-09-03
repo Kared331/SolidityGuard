@@ -5,7 +5,6 @@ import httpx
 
 from app.services.engine.base import BaseEngine
 
-
 # SWC Registry 官方标题（https://swcregistry.io，2018 定稿后保持稳定）。
 # 上游仓库（SmartContractSecurity/SWC-registry）已于 2020 年后归档，所有
 # SWC-*.md 被替换为弃用横幅 + "# Title" 占位，正文无真实标题，故此处内置
@@ -81,22 +80,16 @@ def _parse_swc_markdown(raw_content: str, swc_id: str | None = None) -> dict:
     """
     title = _SWC_TITLES.get(swc_id or "") if swc_id else None
     if not title:
-        title_match = re.search(
-            r"^#\s+(.+)", _DEPRECATED_BANNER.sub("", raw_content), re.MULTILINE
-        )
+        title_match = re.search(r"^#\s+(.+)", _DEPRECATED_BANNER.sub("", raw_content), re.MULTILINE)
         title = title_match.group(1).strip() if title_match else None
 
-    desc_match = re.search(
-        r"##\s+Description\s*\n(.*?)(?=\n##|\Z)", raw_content, re.DOTALL
-    )
+    desc_match = re.search(r"##\s+Description\s*\n(.*?)(?=\n##|\Z)", raw_content, re.DOTALL)
     description = desc_match.group(1).strip() if desc_match else ""
 
     code_match = re.search(r"```solidity\s*\n(.*?)```", raw_content, re.DOTALL)
     code_example = code_match.group(1).strip() if code_match else None
 
-    severity_match = re.search(
-        r"(?:Severity|Severity Level)\s*:\s*(\w+)", raw_content, re.IGNORECASE
-    )
+    severity_match = re.search(r"(?:Severity|Severity Level)\s*:\s*(\w+)", raw_content, re.IGNORECASE)
     severity = severity_match.group(1) if severity_match else None
 
     return {

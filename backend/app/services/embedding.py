@@ -15,14 +15,14 @@ import threading
 
 import httpx
 from tenacity import (
+    before_sleep_log,
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log,
 )
 
-from app.llm.config import get_config, ProviderConfig
+from app.llm.config import ProviderConfig, get_config
 
 logger = logging.getLogger("solidguard.services.embedding")
 _model_lock = threading.Lock()
@@ -74,7 +74,9 @@ def get_embedding(text: str) -> list[float]:
 
         logger.debug(
             "请求 Embedding API: provider=%s, base_url=%s, model=%s",
-            name, base_url, model,
+            name,
+            base_url,
+            model,
         )
         # P2-2: 信号量仅包裹实际网络 IO（post + raise_for_status），
         # JSON 解析移出槽位争用路径，提升并发利用率（A5：与文件级 ThreadPool(5) 对齐）
@@ -147,10 +149,12 @@ def get_embedding_batch(texts: list[str]) -> list[list[float]]:
         all_embeddings: list[list[float]] = []
         # 分片处理，避免超出 API 单次输入上限
         for start in range(0, len(texts), _BATCH_LIMIT):
-            chunk = texts[start:start + _BATCH_LIMIT]
+            chunk = texts[start : start + _BATCH_LIMIT]
             logger.debug(
                 "请求批量 Embedding API: provider=%s, model=%s, batch_size=%d",
-                name, model, len(chunk),
+                name,
+                model,
+                len(chunk),
             )
             # P2-2: 信号量仅包裹网络 IO，JSON 解析与 append 循环移出槽位争用路径；
             # 大 batch（≤32）解析期间释放槽位给其他文件并行 post，避免饥饿（A5 对齐）
@@ -164,9 +168,7 @@ def get_embedding_batch(texts: list[str]) -> list[list[float]]:
 
             data = resp.json()
             if "data" not in data or len(data["data"]) != len(chunk):
-                raise ValueError(
-                    f"批量 Embedding 响应数量不匹配: 期望 {len(chunk)}, 收到 {len(data.get('data', []))}"
-                )
+                raise ValueError(f"批量 Embedding 响应数量不匹配: 期望 {len(chunk)}, 收到 {len(data.get('data', []))}")
 
             # OpenAI API 返回的 data 按 index 排序，确保顺序一致
             sorted_data = sorted(data["data"], key=lambda x: x.get("index", 0))
@@ -176,7 +178,9 @@ def get_embedding_batch(texts: list[str]) -> list[list[float]]:
                     raise ValueError("Invalid embedding format in batch response")
                 all_embeddings.append(emb)
 
-        logger.info("批量 Embedding 完成: %d 条文本, 维度 %d", len(texts), len(all_embeddings[0]) if all_embeddings else 0)
+        logger.info(
+            "批量 Embedding 完成: %d 条文本, 维度 %d", len(texts), len(all_embeddings[0]) if all_embeddings else 0
+        )
         return all_embeddings
 
     raise ValueError(f"不支持的 Embedding Provider API 类型: {provider.api}")
@@ -195,7 +199,9 @@ def _get_local_embedding(text: str) -> list[float]:
             if _local_model is None:
                 from sentence_transformers import SentenceTransformer
 
-                model_path = os.path.join(_LOCAL_MODEL_DIR, "models--sentence-transformers--all-MiniLM-L6-v2", "snapshots")
+                model_path = os.path.join(
+                    _LOCAL_MODEL_DIR, "models--sentence-transformers--all-MiniLM-L6-v2", "snapshots"
+                )
                 if os.path.isdir(model_path):
                     # Find the snapshot hash directory
                     snapshots = os.listdir(model_path)
@@ -221,7 +227,9 @@ def _get_local_embedding_batch(texts: list[str]) -> list[list[float]]:
             if _local_model is None:
                 from sentence_transformers import SentenceTransformer
 
-                model_path = os.path.join(_LOCAL_MODEL_DIR, "models--sentence-transformers--all-MiniLM-L6-v2", "snapshots")
+                model_path = os.path.join(
+                    _LOCAL_MODEL_DIR, "models--sentence-transformers--all-MiniLM-L6-v2", "snapshots"
+                )
                 if os.path.isdir(model_path):
                     snapshots = os.listdir(model_path)
                     if snapshots:

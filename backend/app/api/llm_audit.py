@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db
 from app.schemas.audit import AuditTriggerResponse, LLMAuditResultResponse
-from app.services.audit_service import trigger_llm_audit, list_llm_audit_results
+from app.services.audit_service import list_llm_audit_results, trigger_llm_audit
 
 router = APIRouter(tags=["LLM Audit"])
 

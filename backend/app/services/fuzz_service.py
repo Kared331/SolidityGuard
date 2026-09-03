@@ -1,14 +1,12 @@
 from __future__ import annotations
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import FuzzingResult, Project
+from app.services.task_dispatcher import TaskAlreadyRunning, get_task_dispatcher
 from app.state.project_state import ProjectStatus
-from app.services.task_dispatcher import get_task_dispatcher, TaskAlreadyRunning
-from app.tasks.pipeline import build_fuzz_pipeline  # 保留：E2 技术冗余
-
-from fastapi import HTTPException
 
 
 async def trigger_fuzz(db: AsyncSession, project_id: int) -> str:
@@ -22,7 +20,7 @@ async def trigger_fuzz(db: AsyncSession, project_id: int) -> str:
     try:
         return dispatcher.dispatch_fuzz(project_id)
     except TaskAlreadyRunning as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
 
 async def list_fuzz_results(db: AsyncSession, project_id: int) -> list[FuzzingResult]:
@@ -31,8 +29,6 @@ async def list_fuzz_results(db: AsyncSession, project_id: int) -> list[FuzzingRe
         raise HTTPException(status_code=404, detail="Project not found")
 
     result = await db.execute(
-        select(FuzzingResult)
-        .where(FuzzingResult.project_id == project_id)
-        .order_by(FuzzingResult.created_at.desc())
+        select(FuzzingResult).where(FuzzingResult.project_id == project_id).order_by(FuzzingResult.created_at.desc())
     )
     return list(result.scalars().all())

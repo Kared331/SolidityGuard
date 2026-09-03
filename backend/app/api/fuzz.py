@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db
-from app.schemas.fuzz import FuzzTriggerResponse, FuzzResultResponse
-from app.services.fuzz_service import trigger_fuzz, list_fuzz_results
+from app.schemas.fuzz import FuzzResultResponse, FuzzTriggerResponse
+from app.services.fuzz_service import list_fuzz_results, trigger_fuzz
 
 router = APIRouter(tags=["Fuzzing"])
 

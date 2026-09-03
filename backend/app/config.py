@@ -1,6 +1,6 @@
+import logging
 import os
 import sys
-import logging
 from functools import lru_cache
 
 from pydantic import BaseModel  # noqa: F401
@@ -81,9 +81,7 @@ class Settings:
         self.RAG_TOP_K: int = config.rag.topK
 
         # 应用配置级别的 logging 等级
-        logging.getLogger().setLevel(
-            getattr(logging, self.LOG_LEVEL.upper(), logging.INFO)
-        )
+        logging.getLogger().setLevel(getattr(logging, self.LOG_LEVEL.upper(), logging.INFO))
 
         # P1-6: 启动边界校验——空 key 一次性 WARNING（不做请求级重复校验）
         if not self.API_KEY or self.API_KEY == "changeme":
@@ -109,7 +107,7 @@ class Settings:
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     return Settings()
 

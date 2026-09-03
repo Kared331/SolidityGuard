@@ -14,7 +14,7 @@ class ReportEngine(BaseEngine):
 
         polished_findings = polish_with_llm(raw_findings)
 
-        title = f'SolidiGuard Audit Report - Project {project_id}'
+        title = f"SolidiGuard Audit Report - Project {project_id}"
 
         file_paths = {}
 

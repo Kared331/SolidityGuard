@@ -2,18 +2,18 @@
 
 优先使用 Redis Pub/Sub 实时推送，Redis 不可用时降级为数据库轮询。
 """
+
 import asyncio
 import json
 import logging
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 
 from app.database import async_session
-from app.models import Project, AnalysisResult, FuzzingResult, LLMAuditResult, Report
-from app.config import settings
+from app.models import AnalysisResult, FuzzingResult, LLMAuditResult, Project, Report
 
 logger = logging.getLogger("solidguard.api.events")
 
@@ -33,31 +33,19 @@ async def _get_counts(project_id: int) -> dict:
     """获取项目各维度计数（独立子查询，避免交叉膨胀）。"""
     async with async_session() as session:
         detections = (
-            await session.execute(
-                select(func.count(AnalysisResult.id))
-                .where(AnalysisResult.project_id == project_id)
-            )
+            await session.execute(select(func.count(AnalysisResult.id)).where(AnalysisResult.project_id == project_id))
         ).scalar() or 0
 
         fuzz = (
-            await session.execute(
-                select(func.count(FuzzingResult.id))
-                .where(FuzzingResult.project_id == project_id)
-            )
+            await session.execute(select(func.count(FuzzingResult.id)).where(FuzzingResult.project_id == project_id))
         ).scalar() or 0
 
         audit = (
-            await session.execute(
-                select(func.count(LLMAuditResult.id))
-                .where(LLMAuditResult.project_id == project_id)
-            )
+            await session.execute(select(func.count(LLMAuditResult.id)).where(LLMAuditResult.project_id == project_id))
         ).scalar() or 0
 
         reports = (
-            await session.execute(
-                select(func.count(Report.id))
-                .where(Report.project_id == project_id)
-            )
+            await session.execute(select(func.count(Report.id)).where(Report.project_id == project_id))
         ).scalar() or 0
 
         project = await session.get(Project, project_id)
@@ -92,7 +80,7 @@ async def _polling_event_stream(project_id: int, disconnect_event: asyncio.Event
         try:
             await asyncio.wait_for(disconnect_event.wait(), timeout=interval)
             break
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
 
         curr = await _get_counts(project_id)
@@ -133,6 +121,7 @@ async def project_events(project_id: int):
     use_redis = True
     try:
         from app.llm.pipeline.stream import get_audit_stream
+
         stream = get_audit_stream()
         if not await stream.health_check():
             raise ConnectionError("Redis health check failed")

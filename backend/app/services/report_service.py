@@ -3,16 +3,14 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Project, Report
 from app.services.infra.storage import REPORT_DIR
+from app.services.task_dispatcher import TaskAlreadyRunning, get_task_dispatcher
 from app.state.project_state import ProjectStatus
-from app.services.task_dispatcher import get_task_dispatcher, TaskAlreadyRunning
-from app.tasks.pipeline import build_report_pipeline  # 保留：E2 技术冗余
-
-from fastapi import HTTPException
 
 
 async def trigger_report(db: AsyncSession, project_id: int, fmt: str) -> str:
@@ -29,22 +27,16 @@ async def trigger_report(db: AsyncSession, project_id: int, fmt: str) -> str:
     try:
         return dispatcher.dispatch_report(project_id, output_format)
     except TaskAlreadyRunning as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
 
 async def list_reports(db: AsyncSession, project_id: int) -> list[Report]:
-    result = await db.execute(
-        select(Report)
-        .where(Report.project_id == project_id)
-        .order_by(Report.created_at.desc())
-    )
+    result = await db.execute(select(Report).where(Report.project_id == project_id).order_by(Report.created_at.desc()))
     return list(result.scalars().all())
 
 
 async def get_report_download_info(db: AsyncSession, report_id: int, fmt: str) -> tuple[str, str, str]:
-    result = await db.execute(
-        select(Report).where(Report.id == report_id)
-    )
+    result = await db.execute(select(Report).where(Report.id == report_id))
     report = result.scalar_one_or_none()
 
     if not report:
@@ -67,7 +59,7 @@ async def get_report_download_info(db: AsyncSession, report_id: int, fmt: str) -
     try:
         resolved_path.relative_to(reports_base)
     except ValueError:
-        raise HTTPException(status_code=403, detail="Access denied: path traversal detected")
+        raise HTTPException(status_code=403, detail="Access denied: path traversal detected") from None
 
     media_types = {
         "html": "text/html",

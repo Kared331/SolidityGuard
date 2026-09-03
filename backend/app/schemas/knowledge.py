@@ -1,4 +1,3 @@
-from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -11,12 +10,12 @@ class VulnerabilityItemResponse(BaseModel):
     swc_id: str
     title: str
     description: str
-    severity: Optional[str] = None
-    code_example: Optional[str] = None
+    severity: str | None = None
+    code_example: str | None = None
 
 
 class VulnerabilityPaginatedResponse(BaseModel):
     total: int
     page: int
     page_size: int
-    items: List[VulnerabilityItemResponse]
+    items: list[VulnerabilityItemResponse]

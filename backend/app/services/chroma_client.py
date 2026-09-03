@@ -6,17 +6,15 @@ in multi-threaded contexts (e.g., concurrent Celery tasks).
 
 from __future__ import annotations
 
-import os
 import threading
-from typing import Optional
 
 import chromadb
 from chromadb import Collection
 
-from app.config import settings, logger
+from app.config import logger, settings
 
 _persist_dir = settings.CHROMA_PERSIST_DIR
-_client: Optional[chromadb.Client] = None
+_client: chromadb.Client | None = None
 _lock = threading.Lock()
 
 
@@ -36,18 +34,16 @@ def get_vulnerability_collection() -> Collection:
     return client.get_or_create_collection(name="vulnerability_patterns")
 
 
-def query_vulnerabilities(
-    collection: Collection, embedding: list[float], top_k: int = 5
-) -> dict:
+def query_vulnerabilities(collection: Collection, embedding: list[float], top_k: int = 5) -> dict:
     """Query ChromaDB with tenacity retry and fallback (Sprint 3, blueprint 5.3).
 
     Returns {'documents': [[]], 'metadatas': [[]]} on failure.
     """
     from tenacity import (
         retry,
+        retry_if_exception_type,
         stop_after_attempt,
         wait_exponential,
-        retry_if_exception_type,
     )
 
     @retry(
@@ -72,9 +68,7 @@ def query_vulnerabilities(
         return {"documents": [[]], "metadatas": [[]]}
 
 
-def query_vulnerabilities_batch(
-    collection: Collection, embeddings: list[list[float]], top_k: int = 5
-) -> list[dict]:
+def query_vulnerabilities_batch(collection: Collection, embeddings: list[list[float]], top_k: int = 5) -> list[dict]:
     """批量查询 ChromaDB，单次 query 调用处理多个 embedding。
 
     相比循环调用 query_vulnerabilities，减少 N-1 次 ChromaDB 往返。
@@ -93,9 +87,9 @@ def query_vulnerabilities_batch(
 
     from tenacity import (
         retry,
+        retry_if_exception_type,
         stop_after_attempt,
         wait_exponential,
-        retry_if_exception_type,
     )
 
     @retry(

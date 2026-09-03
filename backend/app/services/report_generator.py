@@ -3,14 +3,14 @@
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from jinja2 import Environment, FileSystemLoader
 from sqlalchemy.orm import Session
 
+from app.llm.sync_wrapper import chat_completion
 from app.models import Detection, FalsePositiveFeedback, FuzzingResult, LLMAuditResult
 from app.services.infra.storage import get_report_dir
-from app.llm.sync_wrapper import chat_completion
 
 logger = logging.getLogger("solidguard.services.report_generator")
 
@@ -41,21 +41,19 @@ def aggregate_findings(project_id: int, session: Session) -> dict:
         # Slither 的 elements 字段是数组，取首个元素定位；防御 source_mapping 为 None
         if isinstance(element, list):
             element = element[0] if element else {}
-        slither_findings.append({
-            "check_name": det.check_name,
-            "description": det.description,
-            "impact": det.impact or "Unknown",
-            "code_location": (element.get("source_mapping") or {}).get("filename_relative", "N/A"),
-            "fix_suggestion": "",
-            "gas_optimization": "",
-        })
+        slither_findings.append(
+            {
+                "check_name": det.check_name,
+                "description": det.description,
+                "impact": det.impact or "Unknown",
+                "code_location": (element.get("source_mapping") or {}).get("filename_relative", "N/A"),
+                "fix_suggestion": "",
+                "gas_optimization": "",
+            }
+        )
 
     # 2.4: Correctly handle fuzz failures_json which is a LIST, not a dict
-    fuzzing_results = (
-        session.query(FuzzingResult)
-        .filter(FuzzingResult.project_id == project_id)
-        .all()
-    )
+    fuzzing_results = session.query(FuzzingResult).filter(FuzzingResult.project_id == project_id).all()
     fuzzing_findings = []
     for fr in fuzzing_results:
         failures = fr.failures_json
@@ -64,41 +62,43 @@ def aggregate_findings(project_id: int, session: Session) -> dict:
         # failures_json is a list of {"test_name": ..., "counterexample": ...}
         if isinstance(failures, list):
             for item in failures:
-                fuzzing_findings.append({
-                    "title": item.get("test_name", "unknown"),
-                    "description": str(item.get("counterexample", "No counterexample")),
-                    "severity": "High",
-                    "code_location": item.get("test_name", "N/A"),
-                    "fix_suggestion": "",
-                    "gas_optimization": "",
-                })
+                fuzzing_findings.append(
+                    {
+                        "title": item.get("test_name", "unknown"),
+                        "description": str(item.get("counterexample", "No counterexample")),
+                        "severity": "High",
+                        "code_location": item.get("test_name", "N/A"),
+                        "fix_suggestion": "",
+                        "gas_optimization": "",
+                    }
+                )
         elif isinstance(failures, dict):
             # Legacy dict format – iterate key-value pairs
             for name, detail in failures.items():
-                fuzzing_findings.append({
-                    "title": name,
-                    "description": str(detail),
-                    "severity": "High",
-                    "code_location": name,
-                    "fix_suggestion": "",
-                    "gas_optimization": "",
-                })
+                fuzzing_findings.append(
+                    {
+                        "title": name,
+                        "description": str(detail),
+                        "severity": "High",
+                        "code_location": name,
+                        "fix_suggestion": "",
+                        "gas_optimization": "",
+                    }
+                )
 
-    llm_results = (
-        session.query(LLMAuditResult)
-        .filter(LLMAuditResult.project_id == project_id)
-        .all()
-    )
+    llm_results = session.query(LLMAuditResult).filter(LLMAuditResult.project_id == project_id).all()
     llm_findings = []
     for lr in llm_results:
-        llm_findings.append({
-            "contract_name": lr.contract_name,
-            "function_name": lr.function_name,
-            "vulnerability_description": lr.vulnerability_description,
-            "severity": lr.severity,
-            "suggested_fix": lr.suggested_fix or "",
-            "gas_optimization": lr.gas_optimization or "",
-        })
+        llm_findings.append(
+            {
+                "contract_name": lr.contract_name,
+                "function_name": lr.function_name,
+                "vulnerability_description": lr.vulnerability_description,
+                "severity": lr.severity,
+                "suggested_fix": lr.suggested_fix or "",
+                "gas_optimization": lr.gas_optimization or "",
+            }
+        )
 
     return {
         "slither_findings": slither_findings,
@@ -130,7 +130,9 @@ def _polish_single_batch(batch_items: list, key: str) -> list:
     if len(polished) != len(batch_items):
         logger.warning(
             "Polished batch size mismatch for %s: expected %d, got %d; using raw",
-            key, len(batch_items), len(polished),
+            key,
+            len(batch_items),
+            len(polished),
         )
         return batch_items
     return polished
@@ -161,7 +163,9 @@ def polish_with_llm(findings: dict) -> dict:
             except (json.JSONDecodeError, ValueError, Exception):
                 logger.warning(
                     "LLM polishing failed for %s batch %d-%d, using raw findings",
-                    key, i, i + len(batch),
+                    key,
+                    i,
+                    i + len(batch),
                 )
                 batched.extend(batch)
 
@@ -170,9 +174,7 @@ def polish_with_llm(findings: dict) -> dict:
     # Validate final structure
     for key in _EXPECTED_KEYS:
         if not isinstance(polished.get(key), list):
-            logger.warning(
-                "LLM polishing result key '%s' is not a list, using raw findings", key
-            )
+            logger.warning("LLM polishing result key '%s' is not a list, using raw findings", key)
             return findings
 
     return polished
@@ -191,7 +193,7 @@ def generate_html(project_id: int, title: str, findings: dict) -> str:
 
     html = template.render(
         title=title,
-        generated_date=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        generated_date=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
         project_id=project_id,
         total_findings=total,
         slither_findings=findings.get("slither_findings", []),
@@ -218,14 +220,11 @@ def generate_pdf(html_path: str) -> str:
 
 def generate_word(findings: dict, title: str, project_id: int) -> str:
     from docx import Document
-    from docx.shared import Pt, Inches
 
     doc = Document()
 
     doc.add_heading(title, level=0)
-    doc.add_paragraph(
-        f"Generated on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
-    )
+    doc.add_paragraph(f"Generated on {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}")
 
     total = (
         len(findings.get("slither_findings", []))
@@ -236,12 +235,28 @@ def generate_word(findings: dict, title: str, project_id: int) -> str:
     doc.add_paragraph(f"Total findings: {total}")
 
     sections = [
-        ("Slither Static Analysis Findings", "slither_findings",
-         ["check_name", "description", "impact", "code_location", "fix_suggestion", "gas_optimization"]),
-        ("Fuzzing Findings", "fuzzing_findings",
-         ["title", "description", "severity", "code_location", "fix_suggestion", "gas_optimization"]),
-        ("LLM Audit Findings", "llm_findings",
-         ["contract_name", "function_name", "vulnerability_description", "severity", "suggested_fix", "gas_optimization"]),
+        (
+            "Slither Static Analysis Findings",
+            "slither_findings",
+            ["check_name", "description", "impact", "code_location", "fix_suggestion", "gas_optimization"],
+        ),
+        (
+            "Fuzzing Findings",
+            "fuzzing_findings",
+            ["title", "description", "severity", "code_location", "fix_suggestion", "gas_optimization"],
+        ),
+        (
+            "LLM Audit Findings",
+            "llm_findings",
+            [
+                "contract_name",
+                "function_name",
+                "vulnerability_description",
+                "severity",
+                "suggested_fix",
+                "gas_optimization",
+            ],
+        ),
     ]
 
     for section_title, key, fields in sections:

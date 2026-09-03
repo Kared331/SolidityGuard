@@ -1,6 +1,6 @@
-from typing import Optional
-from pydantic import BaseModel
 from datetime import datetime
+
+from pydantic import BaseModel
 
 
 class AuditTriggerResponse(BaseModel):
@@ -12,9 +12,9 @@ class AuditTriggerResponse(BaseModel):
 class LLMAuditResultResponse(BaseModel):
     id: int
     contract_name: str
-    function_name: Optional[str] = None
+    function_name: str | None = None
     vulnerability_description: str
     severity: str
-    suggested_fix: Optional[str] = None
-    gas_optimization: Optional[str] = None
+    suggested_fix: str | None = None
+    gas_optimization: str | None = None
     created_at: datetime

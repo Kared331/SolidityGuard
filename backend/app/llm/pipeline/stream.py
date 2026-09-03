@@ -2,13 +2,13 @@
 
 为审计流水线提供实时进度推送能力，替代数据库轮询机制。
 """
+
 from __future__ import annotations
 
 import asyncio
 import json
 import logging
-from dataclasses import asdict
-from typing import AsyncIterator, Optional
+from collections.abc import AsyncIterator
 
 import redis.asyncio as aioredis
 
@@ -29,7 +29,7 @@ class AuditStreamManager:
 
     def __init__(self, redis_url: str = "redis://localhost:6379/0"):
         self._redis_url = redis_url
-        self._redis: Optional[aioredis.Redis] = None
+        self._redis: aioredis.Redis | None = None
 
     async def _get_redis(self) -> aioredis.Redis:
         if self._redis is None:
@@ -136,7 +136,7 @@ class AuditStreamManager:
 
 
 # 全局单例
-audit_stream: Optional[AuditStreamManager] = None
+audit_stream: AuditStreamManager | None = None
 
 
 def get_audit_stream() -> AuditStreamManager:
@@ -144,5 +144,6 @@ def get_audit_stream() -> AuditStreamManager:
     global audit_stream
     if audit_stream is None:
         from app.config import settings
+
         audit_stream = AuditStreamManager(redis_url=settings.REDIS_URL)
     return audit_stream

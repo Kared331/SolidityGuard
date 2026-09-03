@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .template_loader import template_loader, PromptTemplate
+from .template_loader import PromptTemplate, template_loader
 
 
 class PromptRegistry:
@@ -9,10 +9,7 @@ class PromptRegistry:
     def get(self, name: str, version: str | None = None) -> PromptTemplate:
         template = template_loader.load(name)
         if version and template.version != version:
-            raise ValueError(
-                f"Template '{name}' version mismatch: "
-                f"requested {version}, found {template.version}"
-            )
+            raise ValueError(f"Template '{name}' version mismatch: requested {version}, found {template.version}")
         return template
 
     def render(self, name: str, **variables) -> tuple[str, str]:

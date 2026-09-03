@@ -18,12 +18,12 @@ P0-4 事件循环复用修复（方案 B 变体）：
     严格懒初始化：禁止 import 时创建循环（Celery prefork fork 安全），
     首次 LLM 调用时才创建，fork 后各 worker 进程各自持有。
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
 import threading
-from typing import Tuple
 
 from .config import get_config
 
@@ -79,9 +79,7 @@ def _get_loop() -> asyncio.AbstractEventLoop:
     return _loop
 
 
-def chat_completion(
-    messages: list[dict], temperature: float = 0.2
-) -> Tuple[str, dict]:
+def chat_completion(messages: list[dict], temperature: float = 0.2) -> tuple[str, dict]:
     """同步版聊天补全接口。
 
     Args:

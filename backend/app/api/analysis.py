@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db
 from app.schemas.analysis import AnalysisTriggerResponse, DetectionResponse
-from app.services.analysis_service import trigger_analysis, list_analyses_filtered
+from app.services.analysis_service import list_analyses_filtered, trigger_analysis
 
 router = APIRouter(tags=["Analysis"])
 

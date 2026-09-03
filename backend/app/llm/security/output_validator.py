@@ -1,7 +1,8 @@
 """Validates LLM JSON output against Pydantic schemas."""
-from typing import Optional
-from ..schemas.audit_output import AuditFindingSchema
+
 import json
+
+from ..schemas.audit_output import AuditFindingSchema
 
 
 class OutputValidator:

@@ -63,13 +63,7 @@ class UploadEngine(BaseEngine):
                             # P2-8: 显式拒绝特殊成员（symlink/hardlink/chardev/blockdev/fifo）
                             # 这类成员可能指向 base_dir 外目标或造成其他安全风险，一律不解压；
                             # Python < 3.12 无 extractall(filter="data")，故手动拦截
-                            if (
-                                member.issym()
-                                or member.islnk()
-                                or member.ischr()
-                                or member.isblk()
-                                or member.isfifo()
-                            ):
+                            if member.issym() or member.islnk() or member.ischr() or member.isblk() or member.isfifo():
                                 self.logger.warning(
                                     "Tar 特殊成员拒绝解压: %s in archive %s",
                                     member.name,
@@ -91,9 +85,7 @@ class UploadEngine(BaseEngine):
         # Step 2: Delete archive files after extraction
         for fname in os.listdir(project_dir):
             fpath = os.path.join(project_dir, fname)
-            if os.path.isfile(fpath) and (
-                fname.lower().endswith((".zip", ".tar.gz", ".tgz"))
-            ):
+            if os.path.isfile(fpath) and (fname.lower().endswith((".zip", ".tar.gz", ".tgz"))):
                 os.remove(fpath)
 
         # Step 3: Scan for .sol files

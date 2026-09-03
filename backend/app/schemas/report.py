@@ -1,6 +1,6 @@
-from typing import Dict, Optional
-from pydantic import BaseModel
 from datetime import datetime
+
+from pydantic import BaseModel
 
 
 class ReportCreateRequest(BaseModel):
@@ -17,5 +17,5 @@ class ReportTriggerResponse(BaseModel):
 class ReportListItemResponse(BaseModel):
     id: int
     title: str
-    file_paths: Optional[Dict] = None
+    file_paths: dict | None = None
     created_at: datetime

@@ -1,10 +1,14 @@
-from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db
 from app.schemas.project import ProjectFileResponse, ProjectResponse
-from app.services.project_service import create_project_with_files, get_all_projects, get_project_files, get_project_or_404
+from app.services.project_service import (
+    create_project_with_files,
+    get_all_projects,
+    get_project_files,
+    get_project_or_404,
+)
 from app.state.project_state import ProjectStatus, get_available_actions
 
 router = APIRouter(tags=["Projects"])
@@ -17,8 +21,8 @@ router = APIRouter(tags=["Projects"])
     description="上传 Solidity 合约文件（.sol）或压缩包（.zip/.tar.gz）创建新项目。支持 Magic Bytes 校验和路径遍历防护。",
 )
 async def create_project(
-    name: Optional[str] = Form(None, description="项目名称（可选）"),
-    files: List[UploadFile] = File(..., description="合约文件或压缩包"),
+    name: str | None = Form(None, description="项目名称（可选）"),
+    files: list[UploadFile] = File(..., description="合约文件或压缩包"),
     db: AsyncSession = Depends(get_db),
 ):
     project = await create_project_with_files(db, name, files)

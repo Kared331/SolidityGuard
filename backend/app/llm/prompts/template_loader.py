@@ -1,7 +1,7 @@
-import yaml
-from pathlib import Path
 from dataclasses import dataclass
-from typing import Optional
+from pathlib import Path
+
+import yaml
 
 
 @dataclass
@@ -32,7 +32,7 @@ class TemplateLoader:
         filepath = self.templates_dir / f"{name}.yaml"
         if not filepath.exists():
             raise FileNotFoundError(f"Prompt template not found: {filepath}")
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         return PromptTemplate(
             name=data["name"],

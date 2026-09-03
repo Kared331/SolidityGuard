@@ -13,7 +13,7 @@ logger = logging.getLogger("solidguard.tasks.process_upload")
 @celery.task(name="process_upload", bind=True)
 def process_upload(self, project_id: int) -> None:
     project_dir = get_project_dir(project_id)
-    
+
     # Status: uploaded -> processing
     with get_sync_session() as session:
         project = session.get(Project, project_id)
@@ -22,7 +22,7 @@ def process_upload(self, project_id: int) -> None:
             if validate_transition(current, ProjectStatus.PROCESSING):
                 project.status = ProjectStatus.PROCESSING.value
                 session.commit()
-    
+
     try:
         self.update_state(state="PROGRESS", meta={"step": "start"})
 

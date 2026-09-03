@@ -1,8 +1,6 @@
 import threading
-from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import Optional
 from collections import defaultdict
+from dataclasses import dataclass
 
 
 @dataclass
@@ -15,7 +13,7 @@ class ProviderMetrics:
     total_tokens_used: int = 0
     retry_count: int = 0
     circuit_breaker_trips: int = 0
-    last_error: Optional[str] = None
+    last_error: str | None = None
 
     @property
     def avg_latency_ms(self) -> float:
@@ -35,9 +33,7 @@ class LLMObservability:
     """
 
     def __init__(self):
-        self._metrics: dict[str, ProviderMetrics] = defaultdict(
-            lambda: ProviderMetrics(provider_name="")
-        )
+        self._metrics: dict[str, ProviderMetrics] = defaultdict(lambda: ProviderMetrics(provider_name=""))
         self._lock = threading.Lock()
 
     def record_call(
@@ -47,7 +43,7 @@ class LLMObservability:
         latency_ms: int,
         success: bool,
         tokens: int,
-        error: Optional[str] = None,
+        error: str | None = None,
     ):
         with self._lock:
             m = self._metrics[provider]

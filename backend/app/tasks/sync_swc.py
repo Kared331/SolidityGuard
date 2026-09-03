@@ -23,11 +23,7 @@ def sync_swc(self):
 
         with get_sync_session() as session:
             for entry in result["parsed_entries"]:
-                existing = (
-                    session.query(VulnerabilityEntry)
-                    .filter_by(swc_id=entry["swc_id"])
-                    .first()
-                )
+                existing = session.query(VulnerabilityEntry).filter_by(swc_id=entry["swc_id"]).first()
                 if existing:
                     existing.title = entry["title"]
                     existing.description = entry["description"]

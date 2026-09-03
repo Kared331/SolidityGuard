@@ -7,11 +7,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
-import logging
-from functools import lru_cache
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -23,15 +22,14 @@ _ENV_VAR_PATTERN = re.compile(r"\$\{([^}]+)\}")
 def _resolve_env_vars(value: Any) -> Any:
     """递归解析配置值中的 ${ENV_VAR} 引用。"""
     if isinstance(value, str):
+
         def _replace(match: re.Match) -> str:
             var_name = match.group(1)
             env_val = os.environ.get(var_name)
             if env_val is None:
-                raise ValueError(
-                    f"环境变量 '{var_name}' 未设置，"
-                    f"但配置文件中引用了 ${{{var_name}}}"
-                )
+                raise ValueError(f"环境变量 '{var_name}' 未设置，但配置文件中引用了 ${{{var_name}}}")
             return env_val
+
         return _ENV_VAR_PATTERN.sub(_replace, value)
     if isinstance(value, dict):
         return {k: _resolve_env_vars(v) for k, v in value.items()}
@@ -42,8 +40,10 @@ def _resolve_env_vars(value: Any) -> Any:
 
 # --- Pydantic 配置模型 ---
 
+
 class ModelConfig(BaseModel):
     """单个模型的配置。"""
+
     id: str
     name: str = ""
     maxTokens: int = 4096
@@ -54,13 +54,14 @@ class ModelConfig(BaseModel):
 
 class ProviderConfig(BaseModel):
     """单个 LLM Provider 的配置。"""
+
     apiKey: str = ""
     baseUrl: str = ""
     api: str = "openai"
     models: list[ModelConfig] = Field(default_factory=list)
     defaultModel: str = ""
 
-    def get_model(self, model_id: Optional[str] = None) -> ModelConfig:
+    def get_model(self, model_id: str | None = None) -> ModelConfig:
         """获取指定模型，未指定时返回第一个。"""
         if model_id:
             for m in self.models:
@@ -68,11 +69,12 @@ class ProviderConfig(BaseModel):
                     return m
         if self.models:
             return self.models[0]
-        raise ValueError(f"Provider 中没有配置任何模型")
+        raise ValueError("Provider 中没有配置任何模型")
 
 
 class AppConfig(BaseModel):
     """应用基础配置。"""
+
     apiKey: str = ""
     port: int = 8000
     maxUploadSizeMb: int = 50
@@ -93,6 +95,7 @@ class AppConfig(BaseModel):
 
 class DatabaseConfig(BaseModel):
     """数据库配置。"""
+
     url: str = ""
     poolSize: int = 10
     maxOverflow: int = 20
@@ -101,17 +104,20 @@ class DatabaseConfig(BaseModel):
 
 class RedisConfig(BaseModel):
     """Redis 配置。"""
+
     url: str = "redis://localhost:6379/0"
 
 
 class RagConfig(BaseModel):
     """RAG 相关配置。"""
+
     chromaPersistDir: str = "./chroma_data"
     topK: int = 5
 
 
 class SolidGuardConfig(BaseModel):
     """SolidGuard 完整配置。"""
+
     app: AppConfig = Field(default_factory=AppConfig)
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)
@@ -126,14 +132,14 @@ class SolidGuardConfig(BaseModel):
             return next(iter(self.providers.values()))
         raise ValueError("配置文件中没有定义任何 LLM Provider")
 
-    def get_provider(self, name: Optional[str] = None) -> ProviderConfig:
+    def get_provider(self, name: str | None = None) -> ProviderConfig:
         """按名称获取 Provider，未指定时返回 default。"""
         if name and name in self.providers:
             return self.providers[name]
         return self.get_default_provider()
 
 
-def load_config(path: Optional[str] = None) -> SolidGuardConfig:
+def load_config(path: str | None = None) -> SolidGuardConfig:
     """加载并校验 JSON 配置文件。
 
     Args:
@@ -158,7 +164,7 @@ def load_config(path: Optional[str] = None) -> SolidGuardConfig:
         )
 
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             raw = json.load(f)
     except json.JSONDecodeError as e:
         raise ValueError(f"配置文件 JSON 格式错误: {path}\n{e}") from e
@@ -174,11 +180,11 @@ def load_config(path: Optional[str] = None) -> SolidGuardConfig:
         raise ValueError(f"配置文件校验失败: {e}") from e
 
 
-_config_instance: Optional[SolidGuardConfig] = None
+_config_instance: SolidGuardConfig | None = None
 _config_mtime: float = 0.0
 
 
-def get_config(path: Optional[str] = None) -> SolidGuardConfig:
+def get_config(path: str | None = None) -> SolidGuardConfig:
     """获取配置单例，支持基于文件 mtime 的热加载。
 
     文件修改后下次调用自动重新加载，改完 solidguard.json 保存即生效，

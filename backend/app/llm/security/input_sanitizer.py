@@ -2,8 +2,8 @@
 Input sanitizer for LLM audit pipeline.
 Detects and mitigates prompt injection attempts.
 """
-import re
 
+import re
 
 # Known prompt injection patterns
 INJECTION_PATTERNS = [
@@ -34,7 +34,7 @@ class InputSanitizer:
 
         # Truncate to max length
         if len(sanitized) > InputSanitizer.MAX_CODE_LENGTH:
-            sanitized = sanitized[:InputSanitizer.MAX_CODE_LENGTH] + "\n// ... (truncated)"
+            sanitized = sanitized[: InputSanitizer.MAX_CODE_LENGTH] + "\n// ... (truncated)"
 
         # Detect injection
         injection_detected = bool(InputSanitizer.detect_injection(sanitized))
