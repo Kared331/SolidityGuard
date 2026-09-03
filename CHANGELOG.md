@@ -6,13 +6,19 @@ SolidGuard 项目更新说明。
 
 ***
 
-## \[Unreleased]
+## [Unreleased]
 
 > 待规划变更。
 
-### v3.0.1 候选（已实现，等待定版）
+***
 
-- **修复** **`POST /api/v1/knowledge/sync`** **端点 500** — celery producer pool 在线程内首次建连丢失 broker hostname（回退 localhost 被拒）；新增 `_apply_with_connection` 显式连接发布，覆盖 task\_dispatcher 四个流水线、process\_upload、SWC 同步全部 API 侧派发点
+## [3.0.1] — 2026-09-03
+
+> 知识库同步链路修复：SWC 同步端点 500、每周自动同步、前端手动同步入口。测试基准：95/95 单元测试通过。
+
+### 🔧 修复与增强
+
+- **修复 `POST /api/v1/knowledge/sync` 端点 500** — celery producer pool 在线程内首次建连丢失 broker hostname（回退 localhost 被拒）；新增 `_apply_with_connection` 显式连接发布，覆盖 task_dispatcher 四个流水线、process_upload、SWC 同步全部 API 侧派发点
 
 - **SWC 知识库每周自动同步** — celery beat 新增 `sync-swc-weekly`（周一 03:10 UTC）；配置 `GITHUB_TOKEN` 后全量拉取不再撞未认证 60/hr 限额
 
@@ -22,7 +28,7 @@ SolidGuard 项目更新说明。
 
 ***
 
-## \[3.0.0] — 2026-09-02
+## [3.0.0] — 2026-09-02
 
 > 企业级稳定性打磨（P1/P2/P3）、性能压测与优化（P4）、启动体验与知识库修复。测试基准：95/95 单元测试通过。
 
@@ -64,7 +70,7 @@ SolidGuard 项目更新说明。
 
 - **页面模块化**：4 个单文件页面 → 6 个功能模块目录（`Dashboard/`、`LLMAudit/`、`ProjectDetail/`、`Report/`、`Upload/`、`Vulnerabilities/`），每个页面拆分为多个子组件 + CSS Module
 
-- **设计系统**：移除 Ant Design，自建 `design-system/`（`components/`、`icons/`、`tokens/`、`index.ts`），包体积从 \~1.2MB 降至 <50KB
+- **设计系统**：移除 Ant Design，自建 `design-system/`（`components/`、`icons/`、`tokens/`、`index.ts`），包体积从 ~1.2MB 降至 <50KB
 
 - **状态管理**：引入 Zustand（`useAppStore`、`useAuditDetailStore`、`useToastStore`）
 
@@ -137,8 +143,8 @@ SolidGuard 项目更新说明。
 
 | 测试文件                  | 测试数    | 覆盖范围                                                      |
 | --------------------- | ------ | --------------------------------------------------------- |
-| `test_services.py`    | 14     | project\_service / detection\_service / analysis\_service |
-| `test_engines.py`     | 22     | upload engine / llm\_audit engine / report engine         |
+| `test_services.py`    | 14     | project_service / detection_service / analysis_service |
+| `test_engines.py`     | 22     | upload engine / llm_audit engine / report engine         |
 | `test_security.py`    | 16     | 路径遍历 / Prompt 注入 / Zip Slip / FP 作用域                      |
 | `test_api.py`         | 12     | Health / Upload / Files / Analyze / Mark-FP               |
 | `test_integration.py` | 18     | 端到端集成测试（原有）                                               |
@@ -229,7 +235,7 @@ SolidGuard 项目更新说明。
 
 ***
 
-### 🔵 企业级稳定性与运维打磨（Phase 1-3 — P0/P1/P2，2026-08-28 \~ 2026-09-01）
+### 🔵 企业级稳定性与运维打磨（Phase 1-3 — P0/P1/P2，2026-08-28 ~ 2026-09-01）
 
 > 依据 `MODIFICATION_BLUEPRINT.md` 蓝图，从「核心链路可用」推进到「企业级本地工具」标准。3 阶段共 25 项交付，commit `9a3112c`。
 
@@ -240,9 +246,9 @@ SolidGuard 项目更新说明。
 | P0-1 | 激活集成测试套件（fixture 补齐）                           | `tests/test_integration.py`、`pytest.ini`                  |
 | P0-2 | LLM Provider 重试机制（tenacity，429/5xx 重试，401 不重试） | `llm/provider/openai_provider.py`、`anthropic_provider.py` |
 | P0-3 | LLM 调用独立限流（Semaphore(maxConcurrentCalls)）      | `llm/sync_wrapper.py`、`llm/config.py`                     |
-| P0-4 | sync\_wrapper 事件循环复用修复（常驻守护线程事件循环）             | `llm/sync_wrapper.py`                                     |
+| P0-4 | sync_wrapper 事件循环复用修复（常驻守护线程事件循环）             | `llm/sync_wrapper.py`                                     |
 | P0-5 | Celery 失败态干净回传与失败原因可观测（S4）                     | `tasks/generate_report.py` 等全部任务                          |
-| P0-6 | report\_generator 回归测试固化                       | `tests/`                                                  |
+| P0-6 | report_generator 回归测试固化                       | `tests/`                                                  |
 
 #### P1 达标差距项（阶段二，11/11 完成）
 
@@ -252,7 +258,7 @@ SolidGuard 项目更新说明。
 | P1-2  | 前端 Error Boundary                              | `frontend/src/components/`、`main.tsx`   |
 | P1-3  | axios 全局错误拦截                                   | `frontend/src/api/client.ts`            |
 | P1-4  | Provider AsyncClient 统一关闭（含 S7 生命周期统一）         | `main.py`、`celery_app.py`               |
-| P1-5  | Compose 运维加固（restart policy + redis env\_file） | `docker-compose.yml`                    |
+| P1-5  | Compose 运维加固（restart policy + redis env_file） | `docker-compose.yml`                    |
 | P1-6  | 配置规范化与教训固化（单一事实来源）                             | `.env.example`、`.gitignore`、`config.py` |
 | P1-7  | Token 预算持久化（S1，重启不清零）                          | `llm/budget/token_budget.py`            |
 | P1-8  | SSE 断线重连与降级轮询（S2）                              | `hooks/useSSE.ts`                       |
@@ -306,7 +312,7 @@ SolidGuard 项目更新说明。
 
 **改动**：`backend/app/services/engine/llm_audit.py`
 
-- 提取 `_audit_single_function()` 辅助方法（线程安全，token\_budget check 内置 `threading.Lock`）
+- 提取 `_audit_single_function()` 辅助方法（线程安全，token_budget check 内置 `threading.Lock`）
 
 - `execute_single_file` 内当 `len(key_functions) > _PARALLEL_FUNC_THRESHOLD(5)` 时启用 `ThreadPoolExecutor(max_workers=5)`
 
@@ -340,7 +346,7 @@ SolidGuard 项目更新说明。
 
 ***
 
-## \[Initial] — 2026-06-05
+## [Initial] — 2026-06-05
 
 - 初始提交：SolidityGuard
 
