@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import client from '../client';
 import type { VulnerabilityEntry } from '../types';
 import { queryKeys } from '../queryKeys';
@@ -30,5 +30,17 @@ export function useVulnerabilities(search?: string) {
       return data.items ?? [];
     },
     staleTime: STALE_TIME,
+  });
+}
+
+/** 手动触发 SWC 知识库同步（后端异步执行，返回即任务已入队）。 */
+export function useTriggerKnowledgeSync() {
+  return useMutation<{ status: string }, Error, void>({
+    mutationFn: async () => {
+      const { data } = await client.post<{ status: string }>(
+        '/v1/knowledge/sync',
+      );
+      return data;
+    },
   });
 }

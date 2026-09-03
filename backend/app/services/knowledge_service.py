@@ -4,11 +4,16 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import VulnerabilityEntry
-from app.tasks.sync_swc import sync_swc
+from app.services.task_dispatcher import _apply_with_connection
 
 
 def trigger_swc_sync() -> None:
-    sync_swc.delay()
+    """发布 SWC 同步任务（显式连接，绕 producer pool hostname 丢失）。"""
+    from app.tasks.sync_swc import sync_swc
+
+    _apply_with_connection(
+        lambda conn: sync_swc.apply_async(connection=conn)
+    )
 
 
 async def search_vulnerabilities(

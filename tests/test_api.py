@@ -88,13 +88,17 @@ class TestHealthEndpoint:
 class TestProjectUpload:
     """Tests for POST /api/v1/projects."""
 
+    @patch(
+        "app.services.project_service._apply_with_connection",
+        side_effect=lambda publisher: publisher(None),
+    )
     @patch("app.services.project_service.process_upload")
     @patch("app.services.project_service.get_project_dir", return_value="/tmp/test_proj")
     @patch("os.makedirs")
     @patch("builtins.open", MagicMock())
     @patch("os.path.realpath", side_effect=lambda p, **kwargs: p)
     def test_upload_valid_sol_file(
-        self, mock_realpath, mock_makedirs, mock_get_dir, mock_process, app_client
+        self, mock_realpath, mock_makedirs, mock_get_dir, mock_process, mock_apply, app_client
     ):
         client, mock_db = app_client
 
@@ -122,13 +126,17 @@ class TestProjectUpload:
         data = resp.json()
         assert "id" in data
 
+    @patch(
+        "app.services.project_service._apply_with_connection",
+        side_effect=lambda publisher: publisher(None),
+    )
     @patch("app.services.project_service.process_upload")
     @patch("app.services.project_service.get_project_dir", return_value="/tmp/test_proj")
     @patch("os.makedirs")
     @patch("builtins.open", MagicMock())
     @patch("os.path.realpath", side_effect=lambda p, **kwargs: p)
     def test_upload_returns_project_response(
-        self, mock_realpath, mock_makedirs, mock_get_dir, mock_process, app_client
+        self, mock_realpath, mock_makedirs, mock_get_dir, mock_process, mock_apply, app_client
     ):
         client, mock_db = app_client
 

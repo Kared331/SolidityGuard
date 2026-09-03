@@ -52,6 +52,13 @@ celery.conf.beat_schedule = {
         "task": "app.tasks.cleanup.cleanup_old_files",
         "schedule": crontab(hour=3, minute=0),  # Run daily at 3 AM UTC
     },
+    # v3.0.1: SWC 知识库每周自动同步（周一 03:10 UTC，避开 cleanup）
+    # 配合 .env 的 GITHUB_TOKEN 使用：未认证 GitHub API 限额 60/hr，
+    # 全量拉取 38 个请求会直接 403。无 token 时任务会失败并在日志告警。
+    "sync-swc-weekly": {
+        "task": "app.tasks.sync_swc.sync_swc",
+        "schedule": crontab(hour=3, minute=10, day_of_week=1),
+    },
 }
 
 

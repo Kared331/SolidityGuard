@@ -21,13 +21,17 @@ class TestCreateProjectWithFiles:
     """Tests for project_service.create_project_with_files."""
 
     @pytest.mark.asyncio
+    @patch(
+        "app.services.project_service._apply_with_connection",
+        side_effect=lambda publisher: publisher(None),
+    )
     @patch("app.services.project_service.process_upload")
     @patch("app.services.project_service.get_project_dir", return_value="/tmp/test_project")
     @patch("builtins.open", MagicMock())
     @patch("os.makedirs")
     @patch("os.path.realpath", side_effect=lambda p, **kwargs: p)
     async def test_create_project_with_sol_file(
-        self, mock_makedirs, mock_get_dir, mock_process, mock_db
+        self, mock_makedirs, mock_get_dir, mock_process, mock_apply, mock_db
     ):
         from app.services.project_service import create_project_with_files
 
@@ -111,12 +115,16 @@ class TestCreateProjectWithFiles:
         assert "file missing filename" in exc_info.value.detail
 
     @pytest.mark.asyncio
+    @patch(
+        "app.services.project_service._apply_with_connection",
+        side_effect=lambda publisher: publisher(None),
+    )
     @patch("app.services.project_service.process_upload")
     @patch("app.services.project_service.get_project_dir", return_value="/tmp/test_project")
     @patch("builtins.open", MagicMock())
     @patch("os.makedirs")
     async def test_create_project_skips_bad_keeps_good(
-        self, mock_makedirs, mock_get_dir, mock_process, mock_db
+        self, mock_makedirs, mock_get_dir, mock_process, mock_apply, mock_db
     ):
         """混合上传时，跳过无效文件、保留有效文件，项目正常创建。"""
         from app.services.project_service import create_project_with_files
@@ -135,7 +143,7 @@ class TestCreateProjectWithFiles:
 
         result = await create_project_with_files(mock_db, "Test", [bad_file, good_file])
         mock_db.add.assert_called_once()
-        mock_process.delay.assert_called_once_with(1)
+        mock_process.apply_async.assert_called_once_with(args=(1,), connection=None)
 
 
 class TestGetProjectFiles:

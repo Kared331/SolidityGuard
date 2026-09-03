@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Input, Select, Table, Icon } from '../../design-system';
+import { Input, Select, Table, Icon, Button } from '../../design-system';
 import type { TableColumn, PaginationConfig, SelectOption } from '../../design-system';
-import { useVulnerabilities } from '../../api/hooks/useVulnerabilities';
+import { useVulnerabilities, useTriggerKnowledgeSync } from '../../api/hooks/useVulnerabilities';
 import type { VulnerabilityEntry } from '../../api/types';
 import { getSeverityConfig, toSeverityTagVariant } from '../../utils/severity';
 import { DEFAULT_PAGE_SIZE } from '../../utils/constants';
+import { useToastStore } from '../../stores/useToastStore';
 import VulnerabilityDetailDrawer from './VulnerabilityDetailDrawer';
 import Tag from '../../design-system/components/Tag';
 import styles from './VulnerabilitiesPage.module.css';
@@ -27,6 +28,27 @@ export default function VulnerabilitiesPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const addToast = useToastStore((s) => s.addToast);
+  const syncMutation = useTriggerKnowledgeSync();
+
+  const handleSync = useCallback(() => {
+    if (syncMutation.isPending) return;
+    syncMutation.mutate(undefined, {
+      onSuccess: () =>
+        addToast({
+          type: 'success',
+          message: '知识库同步任务已启动，同步完成后刷新可见更新。',
+          duration: 4000,
+        }),
+      onError: () =>
+        addToast({
+          type: 'error',
+          message: '同步触发失败，请稍后重试。',
+          duration: 4000,
+        }),
+    });
+  }, [syncMutation, addToast]);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -162,6 +184,14 @@ export default function VulnerabilitiesPage() {
           value={severityFilter}
           onChange={handleSeverityChange}
         />
+        <Button
+          variant="secondary"
+          onClick={handleSync}
+          loading={syncMutation.isPending}
+          disabled={syncMutation.isPending}
+        >
+          同步数据
+        </Button>
       </div>
 
       <Table

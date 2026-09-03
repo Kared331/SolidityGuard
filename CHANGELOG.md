@@ -10,6 +10,16 @@ SolidGuard 项目更新说明。
 
 > 待规划变更。
 
+### v3.0.1 候选（已实现，等待定版）
+
+- **修复** **`POST /api/v1/knowledge/sync`** **端点 500** — celery producer pool 在线程内首次建连丢失 broker hostname（回退 localhost 被拒）；新增 `_apply_with_connection` 显式连接发布，覆盖 task\_dispatcher 四个流水线、process\_upload、SWC 同步全部 API 侧派发点
+
+- **SWC 知识库每周自动同步** — celery beat 新增 `sync-swc-weekly`（周一 03:10 UTC）；配置 `GITHUB_TOKEN` 后全量拉取不再撞未认证 60/hr 限额
+
+- **知识库页「同步数据」按钮** — 手动触发同步（经 nginx 注入 X-API-Key，无前端泄 key 风险）
+
+- **测试适配** — 派发路径 mock `_apply_with_connection`，断言更新为 `apply_async`；基准保持 95/95
+
 ***
 
 ## \[3.0.0] — 2026-09-02

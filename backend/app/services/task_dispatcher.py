@@ -70,6 +70,23 @@ _TASK_TYPE_TO_NAME = {
 }
 
 
+def _apply_with_connection(publisher):
+    """显式创建 Kombu 连接执行任务发布，绕过 celery producer pool。
+
+    背景：celery 的 producer pool 在 API 进程的非主线程首次创建连接时
+    会丢失 broker hostname（日志: "No hostname was supplied. Reverting
+    to default 'localhost'"），导致发布打到容器内无监听的 localhost:6379
+    而抛 OperationalError Connection refused（sync endpoint 跑在 anyio
+    worker 线程，必现）。显式 Connection 在线程下解析正常（已验证）。
+    """
+    from kombu import Connection as KombuConnection
+
+    from app.config import settings
+
+    with KombuConnection(settings.REDIS_URL) as conn:
+        return publisher(conn)
+
+
 def _has_active_task(project_id: int, task_type: str) -> bool:
     """查询 Celery 是否有同项目同类型的活跃任务（运行中或排队中）。
 
@@ -114,28 +131,38 @@ class CeleryTaskDispatcher:
         if _has_active_task(project_id, "analysis"):
             raise TaskAlreadyRunning(project_id, "analyze")
         from app.tasks.pipeline import build_analysis_pipeline
-        result = build_analysis_pipeline(project_id).apply_async()
+        result = _apply_with_connection(
+            lambda conn: build_analysis_pipeline(project_id).apply_async(connection=conn)
+        )
         return result.id
 
     def dispatch_fuzz(self, project_id: int) -> str:
         if _has_active_task(project_id, "fuzz"):
             raise TaskAlreadyRunning(project_id, "fuzz")
         from app.tasks.pipeline import build_fuzz_pipeline
-        result = build_fuzz_pipeline(project_id).apply_async()
+        result = _apply_with_connection(
+            lambda conn: build_fuzz_pipeline(project_id).apply_async(connection=conn)
+        )
         return result.id
 
     def dispatch_llm_audit(self, project_id: int) -> str:
         if _has_active_task(project_id, "llm_audit"):
             raise TaskAlreadyRunning(project_id, "llm-audit")
         from app.tasks.pipeline import build_llm_audit_pipeline
-        result = build_llm_audit_pipeline(project_id).apply_async()
+        result = _apply_with_connection(
+            lambda conn: build_llm_audit_pipeline(project_id).apply_async(connection=conn)
+        )
         return result.id
 
     def dispatch_report(self, project_id: int, output_format: str) -> str:
         if _has_active_task(project_id, "report"):
             raise TaskAlreadyRunning(project_id, "report")
         from app.tasks.pipeline import build_report_pipeline
-        result = build_report_pipeline(project_id, output_format).apply_async()
+        result = _apply_with_connection(
+            lambda conn: build_report_pipeline(
+                project_id, output_format
+            ).apply_async(connection=conn)
+        )
         return result.id
 
 

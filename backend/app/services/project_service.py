@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings, logger
 from app.models import Project, ProjectFile
 from app.services.infra.storage import get_project_dir
+from app.services.task_dispatcher import _apply_with_connection
 from app.tasks.process_upload import process_upload
 
 ALLOWED_EXTENSIONS = {".sol", ".zip", ".tar", ".gz", ".tgz"}
@@ -123,7 +124,10 @@ async def create_project_with_files(db: AsyncSession, name: str | None, files: l
             detail += ": " + "; ".join(rejected_reasons)
         raise HTTPException(status_code=422, detail=detail)
 
-    process_upload.delay(project.id)
+    # 显式连接发布（绕 celery producer pool 在线程内丢 hostname 的缺陷）
+    _apply_with_connection(
+        lambda conn: process_upload.apply_async(args=(project.id,), connection=conn)
+    )
     return project
 
 
