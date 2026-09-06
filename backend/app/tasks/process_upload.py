@@ -2,6 +2,7 @@ import logging
 
 from app.celery_app import celery
 from app.database import get_sync_session
+from app.llm.pipeline.stream import publish_status_change_sync
 from app.models import Project, ProjectFile
 from app.services.engine.upload import UploadEngine
 from app.services.infra.storage import get_project_dir
@@ -22,6 +23,8 @@ def process_upload(self, project_id: int) -> None:
             if validate_transition(current, ProjectStatus.PROCESSING):
                 project.status = ProjectStatus.PROCESSING.value
                 session.commit()
+                # B2: 状态变更 → Redis 发布事件（SSE 前端刷新依据）
+                publish_status_change_sync(project_id, ProjectStatus.PROCESSING.value)
 
     try:
         self.update_state(state="PROGRESS", meta={"step": "start"})
@@ -36,6 +39,8 @@ def process_upload(self, project_id: int) -> None:
                 if project:
                     project.status = ProjectStatus.READY.value
                     session.commit()
+                    # B2: 状态变更 → Redis 发布事件（无合约文件也进入 READY）
+                    publish_status_change_sync(project_id, ProjectStatus.READY.value)
             return
 
         with get_sync_session() as session:
@@ -53,6 +58,9 @@ def process_upload(self, project_id: int) -> None:
                 project.status = ProjectStatus.READY.value
 
             session.commit()
+
+        # B2: 状态变更 → Redis 发布事件（SSE 前端刷新依据）
+        publish_status_change_sync(project_id, ProjectStatus.READY.value)
 
         self.update_state(
             state="PROGRESS",

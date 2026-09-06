@@ -2,6 +2,7 @@ import logging
 
 from app.celery_app import celery
 from app.database import get_sync_session
+from app.llm.pipeline.stream import publish_task_done_sync
 from app.models import AnalysisResult, Detection
 from app.services.engine.slither import SlitherEngine
 from app.services.infra.storage import get_project_dir
@@ -46,6 +47,8 @@ def run_slither(self, project_id: int) -> None:
             state="PROGRESS",
             meta={"step": "complete", "detection_count": result["detection_count"]},
         )
+        # B2: 任务完成 → Redis 发布事件（SSE 前端刷新依据）
+        publish_task_done_sync(project_id, "new_detections", count=result["detection_count"])
         logger.info(
             "Slither analysis completed for project %d: %d detections",
             project_id,

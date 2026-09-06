@@ -14,8 +14,20 @@
       1. 渐进式迁移，降低一次性重构风险
       2. SSE 流式审计功能的开发基础
       3. 面试时展示架构演进思路的参考
+
+    导入策略（PEP 562 延迟导出）：audit_pipeline 会连带加载 Provider/RAG
+    /Prompts 等整条 LLM 链。而本包内的 stream 模块被 run_slither/run_fuzzer
+    等非 LLM 任务引用（B2 SSE 事件发布），若 __init__ 顶层导入
+    audit_pipeline，会迫使这些任务无辜背负 LLM 依赖。故改为 __getattr__
+    惰性导出，仅显式访问 AuditPipeline 时才加载 audit_pipeline。
 """
 
-from .audit_pipeline import AuditPipeline
-
 __all__ = ["AuditPipeline"]
+
+
+def __getattr__(name: str):
+    if name == "AuditPipeline":
+        from .audit_pipeline import AuditPipeline
+
+        return AuditPipeline
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

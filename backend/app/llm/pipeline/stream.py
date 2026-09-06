@@ -1,6 +1,14 @@
 """Redis Pub/Sub 实时推送管理器。
 
 为审计流水线提供实时进度推送能力，替代数据库轮询机制。
+
+双入口：
+- async publish_*：供异步链路（审计 pipeline）调用；
+- sync publish_task_done_sync / publish_status_change_sync：供 Celery
+  worker 同步任务调用，任务完成时发布事件，SSE 端订阅后即时收到。
+
+AuditProgress 仅作类型注解，改用 TYPE_CHECKING 导入，避免模块被
+run_slither/run_fuzzer 等非 LLM 任务加载时牵连 audit_pipeline 依赖链。
 """
 
 from __future__ import annotations
@@ -9,10 +17,12 @@ import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
 
 import redis.asyncio as aioredis
 
-from .audit_pipeline import AuditProgress
+if TYPE_CHECKING:
+    from .audit_pipeline import AuditProgress
 
 logger = logging.getLogger("solidguard.llm.stream")
 
@@ -147,3 +157,51 @@ def get_audit_stream() -> AuditStreamManager:
 
         audit_stream = AuditStreamManager(redis_url=settings.REDIS_URL)
     return audit_stream
+
+
+# ── 同步发布入口（Celery worker 侧） ─────────────────────────────
+# worker 任务为同步上下文（run_slither/run_fuzzer/run_llm_audit/
+# generate_report/process_upload），发布事件时不开事件循环，直接用
+# redis 同步客户端推送，channel 与订阅端（_channel_name）保持一致。
+# 事件结构对齐 events.py 轮询降级路径：{type, project_id, count} 与
+# status_change {type, project_id, status}，保证两种通知路径语义统一。
+
+
+def _publish_sync(project_id: int, event: dict) -> None:
+    """同步发布事件到项目 channel。
+
+    发布失败仅告警不抛出——事件通知是增强而非任务正确性依赖，
+    且 Redis 不可用时 SSE 端点本身会降级为 DB 轮询（见 events.py）。
+    """
+    try:
+        import redis
+
+        from app.config import settings
+
+        channel = _channel_name(project_id)
+        payload = json.dumps(event, default=str)
+        r = redis.from_url(settings.REDIS_URL, socket_timeout=2)
+        try:
+            r.publish(channel, payload)
+        finally:
+            r.close()
+        logger.debug("Published sync to %s: %s", channel, event.get("type"))
+    except Exception as exc:  # noqa: BLE001 - 通知失败不得影响任务结果
+        logger.warning("Redis 同步发布失败 (project_id=%d, type=%s): %s", project_id, event.get("type"), exc)
+
+
+def publish_task_done_sync(project_id: int, event_type: str, count: int = 1) -> None:
+    """同步发布任务完成事件（new_detections/new_fuzz_results 等）。
+
+    Args:
+        project_id: 项目 ID。
+        event_type: 事件类型，与 events.py / 前端 EVENT_CONFIG 对齐
+            （new_detections / new_fuzz_results / new_audit_results / new_report）。
+        count: 本次产生的记录数（Slither 检测数、保存的 LLM finding 数等）。
+    """
+    _publish_sync(project_id, {"type": event_type, "project_id": project_id, "count": count})
+
+
+def publish_status_change_sync(project_id: int, status: str) -> None:
+    """同步发布项目状态变更事件（供 process_upload 等任务调用）。"""
+    _publish_sync(project_id, {"type": "status_change", "project_id": project_id, "status": status})

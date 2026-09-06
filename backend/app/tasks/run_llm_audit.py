@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from app.celery_app import celery
 from app.database import get_sync_session
 from app.llm.budget.token_budget import token_budget
+from app.llm.pipeline.stream import publish_task_done_sync
 from app.models import LLMAuditResult, ProjectFile
 from app.services.engine.llm_audit import LLMAuditEngine
 from app.services.infra.storage import get_project_file_path
@@ -67,6 +68,8 @@ def run_llm_audit(self, project_id: int) -> None:
                 state="PROGRESS",
                 meta={"step": "complete", "functions_audited": 0, "findings_saved": 0, "findings_skipped": 0},
             )
+            # B2: 任务完成 → Redis 发布事件（SSE 前端刷新依据，count=0 表示无新增）
+            publish_task_done_sync(project_id, "new_audit_results", count=0)
             return
 
         engine = LLMAuditEngine()
@@ -182,6 +185,8 @@ def run_llm_audit(self, project_id: int) -> None:
         )
         # P1-7: 任务结束一次性持久化累计 usage 到 Redis（不做逐调用写库）
         token_budget.persist_usage(project_id)
+        # B2: 任务完成 → Redis 发布事件（SSE 前端刷新依据）
+        publish_task_done_sync(project_id, "new_audit_results", count=saved)
 
     except Exception:
         # P0-5: FAILURE 态交由 Celery 原生标记（手动 update_state 破坏结果协议）

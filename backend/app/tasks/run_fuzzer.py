@@ -4,6 +4,7 @@ import logging
 
 from app.celery_app import celery
 from app.database import get_sync_session
+from app.llm.pipeline.stream import publish_task_done_sync
 from app.models import FuzzingResult
 from app.services.engine.fuzzer import FuzzerEngine
 from app.services.infra.storage import get_project_dir
@@ -30,6 +31,8 @@ def run_fuzzer(self, project_id: int) -> None:
             session.commit()
 
         self.update_state(state="PROGRESS", meta={"step": "complete"})
+        # B2: 任务完成 → Redis 发布事件（SSE 前端刷新依据）
+        publish_task_done_sync(project_id, "new_fuzz_results", count=1)
         logger.info(
             "Fuzzing completed for project %d: %d failures",
             project_id,

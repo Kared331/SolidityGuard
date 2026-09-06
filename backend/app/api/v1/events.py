@@ -134,8 +134,16 @@ async def project_events(project_id: int):
     else:
         generator = _polling_event_stream(project_id, disconnect_event)
 
+    # B2: 连接建立后先推送当前快照——弥合「任务在订阅建立前已完成」
+    # 导致的事件丢失窗口（Redis Pub/Sub 无重放），前端据此全量刷新。
+    async def _snapshot_first() -> AsyncIterator[str]:
+        counts = await _get_counts(project_id)
+        yield _sse_event({"type": "snapshot", "project_id": project_id, **counts})
+        async for event in generator:
+            yield event
+
     return StreamingResponse(
-        generator,
+        _snapshot_first(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

@@ -5,6 +5,7 @@ import logging
 
 from app.celery_app import celery
 from app.database import get_sync_session
+from app.llm.pipeline.stream import publish_task_done_sync
 from app.models import Report
 from app.services.engine.report import ReportEngine
 
@@ -31,6 +32,8 @@ def generate_report(self, project_id: int, output_format: str = "html") -> int:
             session.refresh(report)
 
         self.update_state(state="PROGRESS", meta={"step": "complete"})
+        # B2: 任务完成 → Redis 发布事件（SSE 前端刷新依据）
+        publish_task_done_sync(project_id, "new_report", count=1)
         logger.info(
             "Report generated for project %d (format=%s, id=%d)",
             project_id,

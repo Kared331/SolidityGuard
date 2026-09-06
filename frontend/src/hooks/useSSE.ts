@@ -58,6 +58,18 @@ export function useSSE({ projectId, enabled = true }: UseSSEOptions) {
   const handleEvent = useCallback(
     (data: SSEEvent) => {
       const pid = String(data.project_id);
+
+      // B2: snapshot 快照（SSE 连接建立时后端推送）——全量刷新本项目数据，
+      // 弥合「任务在订阅建立前已完成」的事件丢失窗口。不弹 toast。
+      if (data.type === 'snapshot') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(pid) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.analyses.byProject(pid) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.fuzzResults.byProject(pid) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.auditResults.byProject(pid) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.reports.byProject(pid) });
+        return;
+      }
+
       const config = EVENT_CONFIG[data.type];
 
       if (config) {
