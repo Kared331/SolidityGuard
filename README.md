@@ -388,22 +388,22 @@ Users mark individual detections as false positive via the UI. Marked items pers
 
 ---
 
-## 简历声明 → 代码导航（Evidence Map）
+## 代码导航
 
-简历中的每条项目声明对应的真实代码位置，欢迎按图索骥：
+核心模块与代码位置对照：
 
-| 简历声明 | 代码位置 |
+| 模块 | 代码位置 |
 |---------|---------|
-| 三阶段审计流水线（Slither → Foundry → LLM） | `backend/app/tasks/run_slither.py` · `run_fuzzer.py` · `run_llm_audit.py`，编排于 `backend/app/llm/pipeline/audit_pipeline.py` |
-| 文件级 + 函数级双层并行（3.79x 加速） | `backend/app/llm/pipeline/audit_pipeline.py`（`ThreadPoolExecutor(max_workers=5)` + `Semaphore(5)`） |
+| 审计流水线（Slither → Foundry → LLM） | `backend/app/tasks/run_slither.py` · `run_fuzzer.py` · `run_llm_audit.py`，编排于 `backend/app/llm/pipeline/audit_pipeline.py` |
+| 文件级 + 函数级双层并行 | `backend/app/llm/pipeline/audit_pipeline.py`（`ThreadPoolExecutor(max_workers=5)` + `Semaphore(5)`） |
 | RAG 检索增强（ChromaDB + SWC Registry） | `backend/app/llm/rag/retriever.py`，知识库同步 `backend/app/tasks/sync_swc.py` |
-| 误报反馈闭环（标记持久化 + 报告自动排除） | `backend/app/models/feedback.py` · `backend/app/services/detection_service.py` · `backend/app/api/detections.py` |
-| 多 Provider LLM 统一客户端 | `backend/app/llm/provider/`（`openai_provider.py` / `anthropic_provider.py` / `provider_registry.py`） |
-| 线程安全 Token 预算管理 | `backend/app/llm/budget/token_budget.py` |
-| SSE 实时任务进度推送 | `backend/app/api/v1/events.py` |
-| Prompt 注入防护（安全加固） | `backend/app/llm/security/input_sanitizer.py` · `output_validator.py` |
-| TaskDispatcher Protocol 消除循环依赖 | `backend/app/services/task_dispatcher.py` |
-| 95 单测 + 20 集成 + 7 压测 | `tests/`（运行方式见上方 Testing 小节） |
+| 误报反馈（标记持久化 + 报告自动排除） | `backend/app/models/feedback.py` · `backend/app/services/detection_service.py` · `backend/app/api/detections.py` |
+| 多 Provider LLM 客户端 | `backend/app/llm/provider/`（`openai_provider.py` / `anthropic_provider.py` / `provider_registry.py`） |
+| Token 预算管理 | `backend/app/llm/budget/token_budget.py` |
+| SSE 实时任务进度 | `backend/app/api/v1/events.py` |
+| Prompt 输入净化与输出校验 | `backend/app/llm/security/input_sanitizer.py` · `output_validator.py` |
+| TaskDispatcher 任务调度解耦 | `backend/app/services/task_dispatcher.py` |
+| 测试（单元 / 集成 / 性能压测） | `tests/`（运行方式见上方 Testing 小节） |
 
 ---
 
