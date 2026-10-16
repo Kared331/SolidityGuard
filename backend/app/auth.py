@@ -20,16 +20,12 @@ from app.config import logger, settings
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
-async def verify_api_key(
-    request: Request, api_key: str | None = Security(_api_key_header)
-) -> None:
+async def verify_api_key(request: Request, api_key: str | None = Security(_api_key_header)) -> None:
     """FastAPI dependency – raises 403 when the key is missing, wrong, or not configured."""
     if not settings.API_KEY:
         logger.error("API_KEY is not configured – rejecting all requests")
         raise HTTPException(status_code=403, detail="API key not configured on server")
-    if api_key is None or not hmac.compare_digest(
-        api_key.encode("utf-8"), settings.API_KEY.encode("utf-8")
-    ):
+    if api_key is None or not hmac.compare_digest(api_key.encode("utf-8"), settings.API_KEY.encode("utf-8")):
         # A3: 认证失败审计——只记元数据，绝不记录 key 本身
         logger.warning(
             "认证失败: path=%s, client=%s, has_key=%s",

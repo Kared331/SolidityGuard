@@ -22,7 +22,10 @@ async_engine = create_async_engine(
 async_session = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
 # ─── Sync engine (for Celery tasks & Alembic) ───────────────────
-sync_url = settings.DATABASE_URL.replace("+asyncpg", "")
+# 显式钉死同步方言为 psycopg2（requirements 已声明 psycopg2-binary）。
+# 此前 replace 为空后缀得到裸 postgresql://，其默认方言随 SQLAlchemy
+# 版本漂移（新版解析为 psycopg3 → CI 无该依赖，收集阶段 ImportError）。
+sync_url = settings.DATABASE_URL.replace("+asyncpg", "+psycopg2")
 sync_engine = create_engine(
     sync_url,
     echo=False,

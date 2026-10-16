@@ -19,6 +19,7 @@ from app.database import async_engine, async_session
 
 logger = logging.getLogger("solidguard")
 
+
 def _rate_limit_key(request: Request) -> str:
     """限流键：优先取 X-Forwarded-For 末段（受信代理 append 的真实来源）。
 
