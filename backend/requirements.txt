@@ -1,17 +1,35 @@
-fastapi
-uvicorn[standard]
-sqlalchemy[asyncio]
-asyncpg
-alembic
-celery[redis]
-redis
-python-multipart
-psycopg2-binary
-chromadb
-httpx
-jinja2
-weasyprint
-python-docx
-slowapi
-tenacity
-pydantic-settings
+# ─── 版本锁定策略 ────────────────────────────────────────────────
+# 全部 == 钉死，版本取自项目 venv（Python 3.11，与 CI 一致）且已通过
+# 全量测试套件（106 passed）。背景：未锁版本时 CI 拉取 latest，上游
+# 默认方言/行为变更曾导致基线 Test job 红灯（裸 postgresql:// 漂移）。
+# 升级依赖 = 改版本号 → 本地全量 pytest → 推送看 CI，禁止批量升级。
+# ─────────────────────────────────────────────────────────────────
+
+# Web 框架
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+python-multipart==0.0.32
+
+# 数据库
+sqlalchemy[asyncio]==2.0.52
+asyncpg==0.31.0
+psycopg2-binary==2.9.12
+alembic==1.19.2
+
+# 任务队列 / 缓存
+celery[redis]==5.6.3
+redis==6.4.0
+
+# LLM 审计链路
+httpx==0.28.1
+tenacity==9.1.4
+pydantic-settings==2.15.0
+slowapi==0.1.10
+
+# RAG / 知识库
+chromadb==1.5.9
+
+# 报告生成
+jinja2==3.1.6
+weasyprint==69.0
+python-docx==1.2.0

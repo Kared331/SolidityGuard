@@ -77,7 +77,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r backend/requirements.txt
-          pip install pytest pytest-asyncio pytest-cov
+          # 测试工具同步钉版本（与本地 venv 一致），避免 pytest 大版本行为漂移
+          pip install pytest==9.1.1 pytest-asyncio==1.4.0 pytest-cov==7.1.0
 
       - name: Run tests with coverage
         run: |
