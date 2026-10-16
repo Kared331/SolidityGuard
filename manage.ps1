@@ -263,7 +263,7 @@ function Invoke-Doctor {
     $issues = 0
 
     # 1. .env 残留覆盖组件变量的完整 URL（B1 教训）
-    Write-Host "`n[1/4] 检查 .env 是否残留覆盖组件变量的完整连接串..." -ForegroundColor Cyan
+    Write-Host "`n[1/5] 检查 .env 是否残留覆盖组件变量的完整连接串..." -ForegroundColor Cyan
     if (Test-Path $EnvFile) {
         $envContent = Get-Content $EnvFile
         $residualUrls = @()
@@ -286,7 +286,7 @@ function Invoke-Doctor {
     }
 
     # 2. API_KEY / LLM_API_KEY 空值检查
-    Write-Host "`n[2/4] 检查 API_KEY / LLM_API_KEY 是否为空..." -ForegroundColor Cyan
+    Write-Host "`n[2/5] 检查 API_KEY / LLM_API_KEY 是否为空..." -ForegroundColor Cyan
     $apiKey = Get-EnvValue "API_KEY"
     $llmKey = Get-EnvValue "LLM_API_KEY"
     if (-not $apiKey) {
@@ -304,7 +304,7 @@ function Invoke-Doctor {
     }
 
     # 3. 目标端口监听状态
-    Write-Host "`n[3/4] 检查目标端口监听状态..." -ForegroundColor Cyan
+    Write-Host "`n[3/5] 检查目标端口监听状态..." -ForegroundColor Cyan
     foreach ($port in @(8000, 3000)) {
         try {
             $conn = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction Stop
@@ -316,11 +316,25 @@ function Invoke-Doctor {
     }
 
     # 4. localhost -> ::1 IPv6 回环陷阱提示（V2 约束）
-    Write-Host "`n[4/4] localhost IPv6 回环陷阱提示..." -ForegroundColor Cyan
+    Write-Host "`n[4/5] localhost IPv6 回环陷阱提示..." -ForegroundColor Cyan
     Write-Host "  本机 Docker Desktop 的 IPv6 回环（::1）端口转发损坏，" -ForegroundColor Gray
     Write-Host "  Windows 将 localhost 优先解析为 ::1，连接必被重置。" -ForegroundColor Gray
     Write-Host "  -> 所有验证/访问统一使用 127.0.0.1（V2 约束）" -ForegroundColor Yellow
     Write-Host "    前端: http://127.0.0.1:3000  API: http://127.0.0.1:8000" -ForegroundColor Gray
+
+    # 5. backend/ 孤儿配置检测（B1 复审教训：会话工具可能在 backend/ 再生
+    #    0 字节 solidguard.json，直连镜像或以 backend/ 为 cwd 启动时加载
+    #    空配置直接崩溃；有效配置在仓库根）
+    Write-Host "`n[5/5] 检查 backend/ 孤儿配置文件..." -ForegroundColor Cyan
+    $orphanJson = Join-Path $ProjectRoot "backend\solidguard.json"
+    if (Test-Path $orphanJson) {
+        Write-Err "  发现 backend\solidguard.json（孤儿配置，有效配置应在仓库根）"
+        Write-Host "    -> 直连镜像或以 backend/ 为工作目录启动时会加载该空/错配置导致崩溃" -ForegroundColor Gray
+        Write-Host "    -> 解法：删除该文件（Remove-Item backend\solidguard.json）" -ForegroundColor Gray
+        $issues++
+    } else {
+        Write-Ok "  无孤儿配置（backend/ 下无 solidguard.json）"
+    }
 
     # 总结
     Write-Host ""

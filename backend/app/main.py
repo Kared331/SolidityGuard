@@ -8,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 from sqlalchemy import text
 from starlette.responses import JSONResponse
@@ -18,11 +19,30 @@ from app.database import async_engine, async_session
 
 logger = logging.getLogger("solidguard")
 
-# Rate limiting (Fix #11)
+def _rate_limit_key(request: Request) -> str:
+    """限流键：优先取 X-Forwarded-For 末段（受信代理 append 的真实来源）。
+
+    经 nginx 代理时 request.client 是容器内代理 IP，直接用会让所有
+    用户共享同一限流桶；XFF 末段由 nginx 追加（proxy_add_x_forwarded_for），
+    客户端伪造的 XFF 段会被压到前段，不影响末段可信度。
+    直连 API（无代理头）时回退到 remote address。
+
+    已知取舍：https profile（nginx-proxy → frontend 双跳）下末段为内层
+    代理 IP，退化为全局共享桶——保守方向（只会更严），可接受。
+    """
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[-1].strip()
+    return get_remote_address(request)
+
+
+# Rate limiting (Fix #11) + A1 激活
 limiter = Limiter(
-    key_func=get_remote_address,
+    key_func=_rate_limit_key,
     default_limits=[settings.RATE_LIMIT],
     storage_uri=settings.REDIS_URL,
+    # A1: Redis 不可用时降级为进程内限流（同额度），避免存储故障放大为 500
+    in_memory_fallback=[settings.RATE_LIMIT],
 )
 
 
@@ -107,6 +127,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         },
     )
 
+
+# A1: 激活限流——SlowAPIMiddleware 使 default_limits 对全部路由生效。
+# 历史缺陷：仅创建 Limiter 未接中间件/装饰器，RATE_LIMIT 从未实际执行。
+# 注册顺序在 CORS 之前（后注册者为最外层），preflight OPTIONS 由 CORS
+# 直接短路，不消耗限流配额。
+app.add_middleware(SlowAPIMiddleware)
 
 # CORS configuration (Fix #9)
 _allowed_origins = settings.CORS_ORIGINS.split(",")

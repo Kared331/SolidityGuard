@@ -301,3 +301,58 @@ class TestFPProjectScoping:
         result = await mark_false_positive(mock_db, 1)
         added_obj = mock_db.add.call_args[0][0]
         assert added_obj.project_id == sample_analysis_result.project_id
+
+
+# ─── Rate Limiting (A1) ──────────────────────────────────────────
+
+class TestRateLimitWiring:
+    """验证限流真正接入 app（A1 回归保护）。
+
+    历史缺陷：Limiter/default_limits 配置齐全但无中间件、无装饰器，
+    限流从未执行——且无任何测试能发现。以下两个用例分别守护
+    「中间件在位」与「default_limits 实际触发 429」两个事实。
+    """
+
+    def test_main_app_registers_slowapi_middleware(self):
+        from slowapi.middleware import SlowAPIMiddleware
+
+        from app.main import app
+
+        middleware_classes = [getattr(m, "cls", None) for m in app.user_middleware]
+        assert SlowAPIMiddleware in middleware_classes
+
+    def test_default_limits_enforce_429(self):
+        """middleware + default_limits 组合必须在超额时返回 429。
+
+        使用独立 mini-app（内存存储、2/minute），不依赖 Redis，
+        端到端走 SlowAPIMiddleware 真实检查路径。
+        """
+        from fastapi import FastAPI, Request
+        from fastapi.testclient import TestClient
+        from slowapi import Limiter
+        from slowapi.errors import RateLimitExceeded
+        from slowapi.middleware import SlowAPIMiddleware
+        from starlette.responses import JSONResponse
+
+        app = FastAPI()
+        limiter = Limiter(
+            key_func=lambda request: "fixed-key",
+            default_limits=["2/minute"],
+            storage_uri="memory://",
+        )
+        app.state.limiter = limiter
+
+        @app.exception_handler(RateLimitExceeded)
+        async def rate_limit_handler(request, exc):
+            return JSONResponse(status_code=429, content={"detail": "limited"})
+
+        @app.get("/ping")
+        async def ping(request: Request):
+            return {"ok": True}
+
+        app.add_middleware(SlowAPIMiddleware)
+
+        client = TestClient(app)
+        assert client.get("/ping").status_code == 200
+        assert client.get("/ping").status_code == 200
+        assert client.get("/ping").status_code == 429
