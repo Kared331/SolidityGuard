@@ -593,6 +593,7 @@ if ($Logs)    { Invoke-Logs; exit }
 if ($Status)  { Invoke-Status; exit }
 if ($Health)  { Invoke-Health; exit }
 if ($Config)  { Show-ConfigMenu; exit }
+if ($Doctor)  { Invoke-Doctor; exit }
 
 # 无参数 → 交互菜单
 Show-MainMenu
