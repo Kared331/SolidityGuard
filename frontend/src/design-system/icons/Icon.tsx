@@ -72,6 +72,7 @@ const iconRegistry: Record<string, string> = {
   'download': '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 10l4 4 4-4M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   'upload': '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 6l4-4 4 4M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   'refresh': '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13 8a5 5 0 00-9.9-1M3 8a5 5 0 009.9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M3 3v3h3M13 13v-3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'arrow-right': '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 
   /* Security / Audit Specific */
   'shield': '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2S3 4 3 7.5c0 5 5 6.5 5 6.5s5-1.5 5-6.5C13 4 8 2 8 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',

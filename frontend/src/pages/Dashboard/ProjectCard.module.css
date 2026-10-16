@@ -1,18 +1,158 @@
-.project-card__body {
+﻿/* ===== 卷宗条目：发丝线 + 行号 gutter + 朱批状态 ===== */
+
+.entry {
+  display: flex;
+  align-items: stretch;
+  background: var(--ds-color-bg-container);
+  border: 1px solid var(--ds-color-border-default);
   cursor: pointer;
+  position: relative;
+  transition: border-color var(--ds-transition-fast),
+    background-color var(--ds-transition-fast);
 }
 
-.project-card__meta {
+/* 朱笔侧标：hover 时自左侧划入 */
+.entry::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ds-color-critical);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform var(--ds-transition-normal);
+}
+
+.entry:hover,
+.entry:focus-visible {
+  border-color: var(--ds-color-border-strong);
+  background: var(--ds-color-neutral-50);
+  outline: none;
+}
+
+.entry:hover::before,
+.entry:focus-visible::before {
+  transform: scaleY(1);
+}
+
+/* ── 行号 gutter ─────────────────────────────── */
+.entry__gutter {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--ds-space-4) 0 var(--ds-space-4) var(--ds-space-3);
+  min-width: 44px;
+  border-right: 1px solid var(--ds-color-border-default);
+}
+
+.entry__serial {
+  font-family: var(--ds-font-family-mono);
+  font-size: var(--ds-font-size-sm);
+  line-height: var(--ds-line-height-sm);
+  color: var(--ds-color-text-tertiary);
+  transition: color var(--ds-transition-fast);
+}
+
+.entry:hover .entry__serial {
+  color: var(--ds-color-critical);
+}
+
+/* ── 主体 ───────────────────────────────────── */
+.entry__main {
+  flex: 1;
+  min-width: 0;
+  padding: var(--ds-space-4);
   display: flex;
   flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.entry__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   gap: var(--ds-space-2);
 }
 
-.project-card__meta-item {
+.entry__name {
+  margin: 0;
+  font-size: var(--ds-font-size-md);
+  line-height: var(--ds-line-height-md);
+  font-weight: 600;
+  color: var(--ds-color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── 朱批状态：色点 + 文字 ─────────────────── */
+.entry__status {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--ds-font-size-xs);
+  line-height: var(--ds-line-height-xs);
+  color: var(--ds-color-text-secondary);
+}
+
+.entry__status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+}
+
+.entry__status--ready::before {
+  color: var(--ds-color-success);
+}
+
+.entry__status--processing::before {
+  color: var(--ds-color-medium);
+}
+
+.entry__status--failed::before {
+  color: var(--ds-color-critical);
+}
+
+.entry__status--pending::before {
+  color: var(--ds-color-neutral-400);
+}
+
+/* ── meta：mono 数据 ───────────────────────── */
+.entry__meta {
   display: flex;
   align-items: center;
-  gap: var(--ds-space-2);
+  gap: var(--ds-space-4);
+}
+
+.entry__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--ds-font-size-sm);
+  line-height: var(--ds-line-height-sm);
+  color: var(--ds-color-text-tertiary);
+}
+
+.entry__meta-mono {
+  font-family: var(--ds-font-family-mono);
   font-size: var(--ds-font-size-sm);
   color: var(--ds-color-text-secondary);
-  line-height: var(--ds-line-height-sm);
+}
+
+/* ── 箭头 ──────────────────────────────────── */
+.entry__arrow {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--ds-space-4);
+  color: var(--ds-color-text-disabled);
+  transition: color var(--ds-transition-fast),
+    transform var(--ds-transition-fast);
+}
+
+.entry:hover .entry__arrow {
+  color: var(--ds-color-text-primary);
+  transform: translateX(2px);
 }

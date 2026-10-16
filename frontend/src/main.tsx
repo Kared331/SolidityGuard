@@ -7,6 +7,10 @@ import ToastContainer from './components/Toast/ToastContainer';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 
 /* ===== Design Tokens & Global Styles ===== */
+import '@fontsource/noto-serif-sc/600.css';
+import '@fontsource/noto-serif-sc/700.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
 import './design-system/tokens/index.css';
 import './styles/reset.css';
 import './styles/global.css';

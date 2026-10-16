@@ -49,6 +49,7 @@ chroma_data/
 frontend/node_modules/
 frontend/dist/
 frontend/.cache/
+frontend/.npm-cache/
 
 # ─── Celery ─────────────────────────────────────────────────────
 celerybeat-schedule

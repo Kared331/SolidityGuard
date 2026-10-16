@@ -1,10 +1,62 @@
-.dashboard__header {
+/* ===== 卷首：墨点漩涡 + 居中标题 ===== */
+.dashboard__hero {
+  position: relative;
+  height: 300px;
+  margin-bottom: var(--ds-space-6);
+  background: var(--ds-color-bg-container);
+  border: 1px solid var(--ds-color-border-default);
+  overflow: hidden;
+}
+
+.dashboard__vortex {
+  position: absolute;
+  inset: 0;
+}
+
+.dashboard__hero-content {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--ds-space-2);
+  /* 文字不拦截指针——墨流可响应鼠标搅动 */
+  pointer-events: none;
+}
+
+/* ===== 工具栏：检索 + 上传 ===== */
+.dashboard__toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  gap: var(--ds-space-3);
   margin-bottom: var(--ds-space-6);
-  flex-wrap: wrap;
-  gap: var(--ds-space-4);
+}
+
+.dashboard__title {
+  margin: 0;
+  font-family: var(--ds-font-family-heading);
+  font-size: var(--ds-font-size-display);
+  line-height: var(--ds-line-height-display);
+  font-weight: 600;
+  letter-spacing: var(--ds-letter-spacing-tight);
+  color: var(--ds-color-text-primary);
+}
+
+/* 卷宗计数：mono 数字 + 黑体说明 */
+.dashboard__count {
+  margin: 0;
+  font-size: var(--ds-font-size-sm);
+  line-height: var(--ds-line-height-sm);
+  color: var(--ds-color-text-tertiary);
+}
+
+.dashboard__count-num {
+  font-family: var(--ds-font-family-mono);
+  font-size: var(--ds-font-size-sm);
+  color: var(--ds-color-text-secondary);
 }
 
 .dashboard__search {
@@ -26,10 +78,18 @@
   padding: var(--ds-space-16) var(--ds-space-8);
   color: var(--ds-color-text-tertiary);
   background: var(--ds-color-bg-container);
-  border: var(--ds-border-width) solid var(--ds-color-border-default);
-  border-radius: var(--ds-radius-xl);
+  border: 1px solid var(--ds-color-border-default);
   text-align: center;
   gap: var(--ds-space-4);
+}
+
+.dashboard__empty-title {
+  margin: 0;
+  font-family: var(--ds-font-family-heading);
+  font-size: var(--ds-font-size-2xl);
+  line-height: var(--ds-line-height-2xl);
+  font-weight: 600;
+  color: var(--ds-color-text-primary);
 }
 
 .dashboard__empty-icon {
@@ -44,8 +104,7 @@
 .dashboard__skeleton-card {
   height: 140px;
   background: var(--ds-color-neutral-100);
-  border: var(--ds-border-width) solid var(--ds-color-border-default);
-  border-radius: var(--ds-radius-xl);
+  border: 1px solid var(--ds-color-border-default);
   display: flex;
   align-items: center;
   justify-content: center;
