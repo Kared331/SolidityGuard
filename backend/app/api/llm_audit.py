@@ -4,8 +4,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db
-from app.schemas.audit import AuditTriggerResponse, LLMAuditResultResponse
-from app.services.audit_service import list_llm_audit_results, trigger_llm_audit
+from app.schemas.audit import AuditTriggerResponse, IncrementalAuditRequest, LLMAuditResultResponse
+from app.services.audit_service import (
+    list_llm_audit_results,
+    trigger_incremental_audit,
+    trigger_llm_audit,
+)
 
 router = APIRouter(tags=["LLM Audit"])
 
@@ -19,6 +23,24 @@ router = APIRouter(tags=["LLM Audit"])
 async def start_llm_audit(project_id: int, db: AsyncSession = Depends(get_db)):
     task_id = await trigger_llm_audit(db, project_id)
     return AuditTriggerResponse(status="audit_started", project_id=project_id, task_id=task_id)
+
+
+@router.post(
+    "/{project_id}/incremental-audit",
+    response_model=AuditTriggerResponse,
+    summary="触发增量审计",
+    description=(
+        "接收 unified diff，只审计被改动命中的函数；未命中任何函数的改动（import/状态变量）"
+        "会回退为整文件审计。用于 CI 触发。"
+    ),
+)
+async def start_incremental_audit(
+    project_id: int,
+    payload: IncrementalAuditRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    task_id = await trigger_incremental_audit(db, project_id, payload.diff, payload.path_map)
+    return AuditTriggerResponse(status="incremental_audit_started", project_id=project_id, task_id=task_id)
 
 
 @router.get(

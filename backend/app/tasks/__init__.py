@@ -4,6 +4,7 @@ from app.tasks import (
     pipeline,  # noqa: F401
     process_upload,  # noqa: F401
     run_fuzzer,  # noqa: F401
+    run_incremental_audit,  # noqa: F401
     run_llm_audit,  # noqa: F401
     run_slither,  # noqa: F401
     sync_swc,  # noqa: F401

@@ -69,6 +69,7 @@ def build_coverage(file_results: list[dict], files_total: int) -> dict:
     skipped = sum(1 for u in units if u["status"] == "skipped")
     failed = sum(1 for u in units if u["status"] == "failed")
     filtered = sum(1 for u in units if u["status"] == "filtered")
+    unchanged = sum(1 for u in units if u["status"] == "unchanged")
     skip_reasons = Counter(u["reason"] for u in units if u["status"] == "skipped" and u.get("reason"))
     fail_reasons = Counter(u["reason"] for u in units if u["status"] == "failed" and u.get("reason"))
 
@@ -85,6 +86,7 @@ def build_coverage(file_results: list[dict], files_total: int) -> dict:
         "functions_skipped": skipped,
         "functions_failed": failed,
         "functions_filtered": filtered,
+        "functions_unchanged": unchanged,
         "invalid_findings": invalid_findings,
         "rag_hits": sum(1 for u in units if u.get("rag_hits", 0) > 0),
         "rag_failures": rag_failures,
@@ -125,7 +127,7 @@ def _create_run(project_id: int, files_total: int) -> int:
         return run.id
 
 
-def _finish_run(run_id: int, coverage: dict, findings_saved: int) -> None:
+def _finish_run(run_id: int, coverage: dict, findings_saved: int, extra: dict | None = None) -> None:
     with get_sync_session() as session:
         run = session.get(AuditRun, run_id)
         if run is None:
@@ -139,10 +141,14 @@ def _finish_run(run_id: int, coverage: dict, findings_saved: int) -> None:
         run.functions_skipped = coverage["functions_skipped"]
         run.functions_failed = coverage["functions_failed"]
         run.functions_filtered = coverage["functions_filtered"]
+        run.functions_unchanged = coverage["functions_unchanged"]
         run.invalid_findings = coverage["invalid_findings"]
         run.rag_hits = coverage["rag_hits"]
         run.rag_failures = coverage["rag_failures"]
-        run.details_json = {"units": coverage["units"], "warnings": coverage["warnings"]}
+        details = {"units": coverage["units"], "warnings": coverage["warnings"]}
+        if extra:
+            details.update(extra)
+        run.details_json = details
         run.finished_at = func.now()
         session.commit()
 

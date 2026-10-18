@@ -105,6 +105,7 @@ def test_unreadable_file_breaks_file_identity_not_function_identity():
         ([_file_result([_unit("audited"), _unit("skipped", "budget")])], 1),
         ([_file_result([_unit("failed", "llm_error"), _unit("skipped", "budget"), _unit("audited")])], 1),
         ([_file_result([_unit("audited"), _unit("filtered", "keyword_filter")])], 1),
+        ([_file_result([_unit("audited"), _unit("unchanged", "not_in_diff")])], 1),
         ([_file_result([], processed=0, unreadable=1)], 1),
         ([_file_result([_unit("audited")]), _file_result([], processed=0, unreadable=1)], 2),
     ],
@@ -117,6 +118,7 @@ def test_identities_hold(results, files_total):
         + cov["functions_skipped"]
         + cov["functions_failed"]
         + cov["functions_filtered"]
+        + cov["functions_unchanged"]
     )
     assert cov["files_total"] == cov["files_processed"] + cov["files_unreadable"]
 
@@ -151,6 +153,7 @@ def _run(run_id, units, status="completed"):
     run.functions_skipped = sum(1 for u in units if u["status"] == "skipped")
     run.functions_failed = sum(1 for u in units if u["status"] == "failed")
     run.functions_filtered = sum(1 for u in units if u["status"] == "filtered")
+    run.functions_unchanged = sum(1 for u in units if u["status"] == "unchanged")
     run.invalid_findings = 0
     run.rag_hits = 0
     run.rag_failures = 0
@@ -269,7 +272,7 @@ def test_cleanup_deletes_findings_before_runs():
 # ─── 12 迁移链 ───────────────────────────────────────────────────
 
 
-def test_migration_014_is_the_single_head():
+def test_migration_015_is_the_single_head():
     from pathlib import Path
 
     from alembic.config import Config
@@ -280,8 +283,8 @@ def test_migration_014_is_the_single_head():
     cfg.set_main_option("script_location", str(backend / "alembic"))
     script = ScriptDirectory.from_config(cfg)
 
-    assert script.get_heads() == ["014"]
-    assert script.get_revision("014").down_revision == "013"
+    assert script.get_heads() == ["015"]
+    assert script.get_revision("015").down_revision == "014"
 
 
 # ─── 引擎层：状态真的被区分了吗 ─────────────────────────────────
@@ -372,6 +375,22 @@ def test_engine_records_keyword_filtered_units(monkeypatch, tmp_path):
     assert by_name["withdraw"]["status"] == "audited"
     assert by_name["constructor"]["status"] == "audited"
     assert len(result["units"]) == 3
+
+
+def test_engine_incremental_mode_marks_unchanged(monkeypatch):
+    """only_units=... audits the diff target and records the rest as unchanged."""
+    mod = _patch_llm(monkeypatch, lambda messages: ("[]", {"total_tokens": 1}))
+    monkeypatch.setattr(mod.token_budget, "check_budget", lambda pid: (True, ""))
+
+    result = mod.LLMAuditEngine().execute_single_file(
+        1, 1, str(_fixture_path()), only_units={("withdraw", 23)}
+    )
+
+    by_name = {u["function"]: u for u in result["units"]}
+    assert by_name["withdraw"]["status"] == "audited"
+    assert by_name["transfer"]["status"] == "unchanged"
+    assert by_name["transfer"]["reason"] == "not_in_diff"
+    assert result["functions_audited"] == 1
 
 
 def test_finding_without_optional_fields_is_accepted(monkeypatch):

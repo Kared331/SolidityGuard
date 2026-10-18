@@ -9,6 +9,11 @@ class AuditTriggerResponse(BaseModel):
     task_id: str
 
 
+class IncrementalAuditRequest(BaseModel):
+    diff: str
+    path_map: dict[str, str] | None = None
+
+
 class LLMAuditResultResponse(BaseModel):
     id: int
     contract_name: str

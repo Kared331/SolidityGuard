@@ -360,6 +360,7 @@ class LLMAuditEngine:
         project_id: int,
         file_id: int,
         abs_path: str,
+        only_units: set[tuple[str, int]] | None = None,
     ) -> dict:
         """处理单个文件的 LLM 审计（线程安全，可并行调用）。
 
@@ -370,6 +371,10 @@ class LLMAuditEngine:
         启用函数级 LLM 并行（ThreadPoolExecutor(5)，与全局 LLM Semaphore 对齐）。
         多文件场景由上层 run_llm_audit 的文件级 ThreadPool 处理，
         本方法只在单文件多函数时获益（基线场景 F：3.67x 加速潜力）。
+
+        `only_units`: incremental mode. When given, only those (name, line_start)
+        pairs are audited; the rest are recorded as `unchanged / not_in_diff`.
+        Changed units bypass the keyword filter — the diff already said they matter.
         """
         findings: list[dict] = []
         warnings: list[dict] = []
@@ -388,11 +393,21 @@ class LLMAuditEngine:
 
         contract_name = os.path.basename(abs_path)
         all_units = extract_functions(content)
-        selected = select_units(all_units)
-        selected_keys = {(u.name, u.line_start) for u in selected}
+
+        if only_units is None:
+            selected = select_units(all_units)
+            selected_keys = {(u.name, u.line_start) for u in selected}
+            dropped_status, dropped_reason = "filtered", "keyword_filter"
+        else:
+            selected = [u for u in all_units if (u.name, u.line_start) in only_units]
+            selected.sort(key=lambda u: (-u.priority, u.line_start))
+            selected_keys = {(u.name, u.line_start) for u in selected}
+            dropped_status, dropped_reason = "unchanged", "not_in_diff"
+
         key_functions = [{"name": u.name, "body": u.body, "line_start": u.line_start} for u in selected]
-        # Filtered units are recorded, not dropped: the ledger denominator must
-        # be the real function count of the source (P5 measured 20.9% filtered).
+        # Dropped units are recorded, not hidden: the ledger denominator must be
+        # the real function count of the source (P5: 20.9% filtered; incremental:
+        # every untouched function is `unchanged`).
         for unit in all_units:
             if (unit.name, unit.line_start) in selected_keys:
                 continue
@@ -401,12 +416,27 @@ class LLMAuditEngine:
                     "file": contract_name,
                     "function": unit.name,
                     "line": unit.line_start,
-                    "status": "filtered",
-                    "reason": "keyword_filter",
+                    "status": dropped_status,
+                    "reason": dropped_reason,
                     "findings": 0,
                     "rag_hits": 0,
                 }
             )
+
+        # Nothing selected (all filtered, or incremental with no changed unit in
+        # this file) -> no summary/RAG/LLM calls at all. Untouched files in an
+        # incremental run land here, which is what keeps the run cheap.
+        if not key_functions:
+            return {
+                "findings": findings,
+                "units": units,
+                "warnings": warnings,
+                "functions_audited": 0,
+                "files_processed": 1,
+                "files_unreadable": 0,
+                "rag_failures": rag_failures,
+                "invalid_findings": invalid_findings,
+            }
 
         # ── 生成 contract summary ──────────────────────────────────
         sanitized_content, injection_detected = InputSanitizer.sanitize_code(content)
@@ -443,18 +473,6 @@ class LLMAuditEngine:
 
         if not summary_text or len(summary_text.strip()) < 20:
             summary_text = f"Contract: {contract_name}, contains {len(key_functions)} key function(s)."
-
-        if not key_functions:
-            return {
-                "findings": findings,
-                "units": units,
-                "warnings": warnings,
-                "functions_audited": 0,
-                "files_processed": 1,
-                "files_unreadable": 0,
-                "rag_failures": rag_failures,
-                "invalid_findings": invalid_findings,
-            }
 
         # ── 文件内批量 embedding + 批量 RAG 检索 ───────────────────
         embedding_texts = [f"// Contract: {contract_name}\n{func['body']}" for func in key_functions]
