@@ -121,6 +121,10 @@
   font-size: var(--ds-font-size-lg);
 }
 
+.rt-head-spacer {
+  flex: 1;
+}
+
 .rt-bar-wrap {
   margin-bottom: var(--ds-space-3);
 }

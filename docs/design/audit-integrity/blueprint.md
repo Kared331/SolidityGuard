@@ -340,7 +340,7 @@ U:  functions_extracted = audited + skipped + failed + filtered   （仅统计 p
 | 2. 函数级变更映射 | ✅ `services/incremental/mapper.py` |
 | 3. 增量调度（复用优先级与预算） | ✅ `POST /incremental-audit` → `run_incremental_audit` |
 | 4. 变更影响面提示 | ✅ `details_json.incremental` + 报告 Unchanged 行（仅同文件上下文） |
-| 5. CI 触发（Action / Webhook） | ✅ `.github/workflows/solidguard-incremental.yml.example`（接口已验证，未在真实 runner 跑过） |
+| 5. CI 触发（Action / Webhook） | ✅ 模板 + [`CI 模拟`](../../evidence/ci-simulation.md)（真 git diff；GitHub runner 本身未验证） |
 | 6. 两次审计报告对比 | ✅ `GET /runs/{base}/compare/{head}` |
 | 7. UI（审计运行视图） | ✅ ProjectDetail 新 tab：运行列表 + 五段覆盖率条 + 增量计划 + 触发 Drawer + 对比 Drawer |
 

@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { Button, Drawer, Icon, Modal, Spinner, Tag } from '../../design-system';
 import type { AuditRunDetail, AuditRunSummary, CompareFinding } from '../../api/types';
 import { useCompareRuns, useRun, useRuns, useTriggerIncremental } from '../../api/hooks/useRuns';
+import { useGenerateReport } from '../../api/hooks/useReports';
+import { useToastStore } from '../../stores/useToastStore';
 import styles from './RunsTab.module.css';
 
 const SEGMENTS: Array<{ key: keyof AuditRunSummary; label: string; className: string }> = [
@@ -119,6 +121,8 @@ export default function RunsTab({ projectId }: { projectId: string }) {
   const activeId = selectedId ?? (runs[0] ? String(runs[0].id) : null);
   const { data: detail } = useRun(activeId);
   const trigger = useTriggerIncremental(projectId);
+  const generate = useGenerateReport();
+  const addToast = useToastStore((s) => s.addToast);
 
   const compare = useCompareRuns(picked[0] ?? null, picked[1] ?? null);
 
@@ -203,6 +207,23 @@ export default function RunsTab({ projectId }: { projectId: string }) {
                 {detail.mode === 'incremental' ? '增量审计' : '全量审计'}
               </Tag>
               <Tag variant={statusVariant(detail.status)} size="sm">{detail.status}</Tag>
+              <div className={styles['rt-head-spacer']} />
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={generate.isPending}
+                onClick={() =>
+                  generate.mutate(
+                    { projectId, format: 'html' },
+                    {
+                      onSuccess: () =>
+                        addToast({ type: 'success', message: '报告生成中，稍后可在报告页查看', duration: 4000 }),
+                    },
+                  )
+                }
+              >
+                {generate.isPending ? '生成中…' : '生成报告'}
+              </Button>
             </div>
 
             <CoverageBar run={detail} />

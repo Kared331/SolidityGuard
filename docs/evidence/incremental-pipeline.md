@@ -141,3 +141,5 @@ GET /api/v1/runs/{id}
 前端构建通过（`tsc && vite build`），产物 chunk 中含该 tab；服务端已重建镜像并在 3000 端口提供服务。
 
 **未做**：diff 语法高亮、图表库、按 run 过滤 findings、运行分页——这些对答辩演示加分有限。
+
+> CI 触发已用真实 git 仓库模拟验证，见 [`ci-simulation.md`](ci-simulation.md)。

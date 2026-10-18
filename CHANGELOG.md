@@ -429,3 +429,9 @@ SolidGuard 项目更新说明。
 - **新增** `GET /api/v1/projects/{id}/runs` 与 `GET /api/v1/runs/{id}`（覆盖率分项 + 增量计划 + 逐函数账本）。
 - **前端**：ProjectDetail 新增「审计运行」tab——运行列表、五段覆盖率条、增量计划（changed/unchanged）、逐函数账本、粘贴 diff 触发、两次运行对比 Drawer。
 - **测试**：180 单测（+1）；`npm run build` 通过。
+### 2026-10-18 · CI 触发模拟验证 + UI 收尾
+
+- **CI 模拟**：真实 git 仓库 + 真实 `git diff`，插入一行导致行号下移，增量仍精确选中 `withdraw`（8 提取 / 1 审 / 7 未变，missing=[]）。
+- **口径**：对比按 `(合约, 函数, 严重度)` 去重，运行 B 的 5 行 findings 合并为 3 个键。
+- **UI**：默认进入「审计运行」tab；运行详情增加「生成报告」按钮。
+- **未验证**：GitHub 托管 runner 的网络可达性（需 self-hosted），属部署配置而非代码。

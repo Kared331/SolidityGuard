@@ -45,7 +45,7 @@ export default function ProjectDetailPage() {
   const setCurrentProject = useAppStore((s) => s.setCurrentProject);
   const { drawerOpen, selectedFinding, findingType, closeDrawer } = useAuditDetailStore();
 
-  const [activeTab, setActiveTab] = useState('slither');
+  const [activeTab, setActiveTab] = useState('runs');
 
   useEffect(() => {
     if (project) {
