@@ -68,6 +68,7 @@ def build_coverage(file_results: list[dict], files_total: int) -> dict:
     audited = sum(1 for u in units if u["status"] == "audited")
     skipped = sum(1 for u in units if u["status"] == "skipped")
     failed = sum(1 for u in units if u["status"] == "failed")
+    filtered = sum(1 for u in units if u["status"] == "filtered")
     skip_reasons = Counter(u["reason"] for u in units if u["status"] == "skipped" and u.get("reason"))
     fail_reasons = Counter(u["reason"] for u in units if u["status"] == "failed" and u.get("reason"))
 
@@ -83,6 +84,7 @@ def build_coverage(file_results: list[dict], files_total: int) -> dict:
         "functions_audited": audited,
         "functions_skipped": skipped,
         "functions_failed": failed,
+        "functions_filtered": filtered,
         "invalid_findings": invalid_findings,
         "rag_hits": sum(1 for u in units if u.get("rag_hits", 0) > 0),
         "rag_failures": rag_failures,
@@ -136,6 +138,7 @@ def _finish_run(run_id: int, coverage: dict, findings_saved: int) -> None:
         run.functions_audited = coverage["functions_audited"]
         run.functions_skipped = coverage["functions_skipped"]
         run.functions_failed = coverage["functions_failed"]
+        run.functions_filtered = coverage["functions_filtered"]
         run.invalid_findings = coverage["invalid_findings"]
         run.rag_hits = coverage["rag_hits"]
         run.rag_failures = coverage["rag_failures"]

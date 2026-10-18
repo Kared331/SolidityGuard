@@ -28,7 +28,11 @@ class AuditRun(Base):
 
     Two identities must hold for every row:
         files_total          == files_processed + files_unreadable
-        functions_extracted  == functions_audited + functions_skipped + functions_failed
+        functions_extracted  == audited + skipped + failed + filtered
+
+    `filtered` = dropped by the keyword pre-filter, never sent to the LLM.
+    It is recorded instead of disappearing, so the denominator is the real
+    function count of the source, not the post-filter count.
     """
 
     __tablename__ = "audit_runs"
@@ -48,6 +52,7 @@ class AuditRun(Base):
     functions_audited: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     functions_skipped: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     functions_failed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    functions_filtered: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     invalid_findings: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     rag_hits: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

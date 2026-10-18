@@ -64,6 +64,7 @@
                     <tr><th>Files processed</th><td>{{ audit_coverage.files_processed }} / {{ audit_coverage.files_total }}</td></tr>
                     <tr><th>Functions extracted</th><td>{{ audit_coverage.extracted }}</td></tr>
                     <tr><th>Audited</th><td>{{ audit_coverage.audited }}</td></tr>
+                    <tr><th>Filtered (keyword)</th><td>{{ audit_coverage.filtered }}</td></tr>
                     <tr><th>Skipped</th><td>{{ audit_coverage.skipped }}{% if audit_coverage.skip_reasons %}: {% for reason, count in audit_coverage.skip_reasons.items() %}{{ reason }}={{ count }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</td></tr>
                     <tr><th>Failed</th><td>{{ audit_coverage.failed }}{% if audit_coverage.fail_reasons %}: {% for reason, count in audit_coverage.fail_reasons.items() %}{{ reason }}={{ count }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</td></tr>
                     <tr><th>Coverage</th><td>{{ "%.1f"|format(audit_coverage.coverage * 100) }}%</td></tr>

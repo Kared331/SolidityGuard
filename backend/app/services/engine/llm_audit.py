@@ -247,24 +247,6 @@ def _parse_llm_json(text: str) -> list | None:
     return None
 
 
-def _extract_key_functions(source_code: str) -> list[dict]:
-    """Functions selected for LLM audit, highest priority first.
-
-    Extraction lives in ``solidity_units`` (mask comments/strings, stop at ';',
-    include constructor/receive/fallback). This adapter keeps the historical
-    dict shape that ``execute_single_file`` consumes.
-    """
-    return [
-        {
-            "name": unit.name,
-            "body": unit.body,
-            "kind": unit.kind,
-            "line_start": unit.line_start,
-        }
-        for unit in select_units(extract_functions(source_code))
-    ]
-
-
 class LLMAuditEngine:
     """File-level audit unit. Project-level fan-out lives in tasks/run_llm_audit.
 
@@ -404,7 +386,26 @@ class LLMAuditEngine:
             return _unreadable_file()
 
         contract_name = os.path.basename(abs_path)
-        key_functions = _extract_key_functions(content)
+        all_units = extract_functions(content)
+        selected = select_units(all_units)
+        selected_keys = {(u.name, u.line_start) for u in selected}
+        key_functions = [{"name": u.name, "body": u.body, "line_start": u.line_start} for u in selected]
+        # Filtered units are recorded, not dropped: the ledger denominator must
+        # be the real function count of the source (P5 measured 20.9% filtered).
+        for unit in all_units:
+            if (unit.name, unit.line_start) in selected_keys:
+                continue
+            units.append(
+                {
+                    "file": contract_name,
+                    "function": unit.name,
+                    "line": unit.line_start,
+                    "status": "filtered",
+                    "reason": "keyword_filter",
+                    "findings": 0,
+                    "rag_hits": 0,
+                }
+            )
 
         # ── 生成 contract summary ──────────────────────────────────
         sanitized_content, injection_detected = InputSanitizer.sanitize_code(content)
@@ -563,6 +564,8 @@ class LLMAuditEngine:
                     "rag_hits": rag_hit_counts[idx],
                 }
             )
+
+        units.sort(key=lambda u: (u["line"], u["function"]))
 
         return {
             "findings": findings,

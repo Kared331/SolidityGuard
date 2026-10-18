@@ -91,3 +91,6 @@ skills/
 # ─── Foundry build artifacts (if forge runs with cwd=backend) ───
 backend/cache/
 backend/out/
+
+# ─── Fetched measurement corpus (P5, third-party sources) ───────
+corpus/
