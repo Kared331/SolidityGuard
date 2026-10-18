@@ -10,6 +10,16 @@ SolidGuard 项目更新说明。
 
 > 待规划变更。
 
+### 2026-10-18 · 审计完整性 P0–P2
+
+- **提取层**：新增 `services/engine/solidity_units.py`（掩码注释/字符串 + 括号配对），替换正则+关键词白名单。实测 57 个真实文件：提取单元 1896 = 参考真值，漏/噪 0；`constructor`/`receive`/`fallback` 不再被跳过。旧实现的问题记录于 `docs/evidence/extraction-baseline.md`。
+- **审计账本**：新增 `audit_runs` 表与 `llm_audit_results.audit_run_id`（迁移 013）。两条恒等式可断言：`files_total = processed + unreadable`、`functions_extracted = audited + skipped + failed`。
+- **降级可见**：预算耗尽/RAG 失败/LLM 异常/解析失败均写入单元状态与原因；`severity="unknown"` 出口删除，失败不再伪装成 finding。
+- **报告**：新增"Audit Coverage & Integrity"段与降级横幅；LLM findings 只取最新一次 run，修复重复审计导致报告重复计入的问题。
+- **清理**：cleanup 补 `audit_runs` 删除（FK 顺序）。
+- **测试**：138 单测（+25）/ 20 集成 / 7 性能全绿；E2E 项目 #47 验证账本与报告一致。
+- **对外材料**：README 删除无出处的 `210s → 70s`，改为 mock 基准实测并标注口径。
+
 ***
 
 ## [3.0.1] — 2026-09-03

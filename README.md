@@ -24,7 +24,7 @@ SolidGuard 是一个集**静态分析**、**模糊测试**与 **LLM 深度审计
 | 维度 | 亮点 |
 |------|------|
 | **三阶段审计流水线** | Slither 静态分析 → Foundry 模糊测试 → LLM 深度审计（RAG 增强） |
-| **性能优化成果** | 审计总延迟从 **210s 降至 70s**（降幅 67%），非 LLM 开销从 40s 降至 1.7s |
+| **性能优化成果** | 合成场景下编排耗时 935.7ms → 179.4ms（5.22x）；LLM/Embedding/Chroma 全部 mock，**不代表真实审计延迟** |
 | **并发架构** | 文件级并行（5 workers）+ 函数级并行（单文件 N>5 时启用，实测 3.79x 加速）+ 批量化 Embedding/DB 写入 |
 | **模块解耦** | TaskDispatcher Protocol 消除 Service/Task 循环依赖，支持独立单元测试 |
 | **配置热加载** | 基于 mtime 的配置缓存，LLM Provider/Token Budget 修改即时生效，无需重启 |
@@ -67,17 +67,15 @@ docker compose up -d
 
 ## Performance Highlights
 
-Engineering optimizations applied to the audit pipeline:
+> **口径声明**：下表全部来自 `tests/perf/` 的 mock 基准——LLM 用固定 50ms 延迟模拟，Embedding 与 Chroma 均被替换。它度量的是**编排开销与并发效率**，不是真实审计延迟；真实延迟取决于模型与网络，尚无测量。
 
 | Metric | Before | After | Improvement |
 |--------|--------|-------|-------------|
-| **Total audit latency** | 210s | 70s | **67% reduction** |
-| **Non-LLM overhead** | 40s | 1.7s | **95% reduction** |
+| **Pipeline orchestration** (5 files, mocked LLM) | 935.7 ms | 179.4 ms | **5.22x** |
+| **Function-level parallelism** (10 functions, mocked LLM) | 689.6 ms | 181.8 ms | **3.79x** |
 | **Embedding I/O** | Sequential per-file | Batched (32/request) | 20x throughput |
 | **Database writes** | N+1 session commits | Single-session batch commit | Atomic & fast |
-| **LLM calls (cross-file)** | Sequential per-file | File-level parallelism (5 workers) | 5.22x concurrency |
-| **LLM calls (within-file)** | Sequential per-function | Function-level parallelism (N>5) | 3.79x speedup |
-| **Test coverage** | — | 95 unit + 20 integration + 7 perf benchmarks | All green |
+| **Test suite** | — | 138 unit + 20 integration + 7 perf | All green |
 
 **Key techniques:** `ThreadPoolExecutor(max_workers=5)` + `Semaphore(5)` for file-level parallelism · **function-level parallelism** (threshold N>5, aligned with LLM Semaphore) for within-file multi-function contracts · batch embedding (limit 32) · single-session batch commit for findings · `TaskDispatcher` Protocol for Service/Task decoupling.
 
@@ -276,7 +274,7 @@ SolidGuard/
 ├── frontend/
 │   ├── src/                        # React + TypeScript (pages, design-system, hooks, stores)
 │   └── nginx.conf                  # Reverse proxy + SPA fallback
-├── tests/                          # 95 unit + 20 integration + 7 perf benchmarks
+├── tests/                          # 138 unit + 20 integration + 7 perf benchmarks
 ├── manage.ps1                      # Windows management portal
 ├── docker-compose.yml              # Service orchestration
 ├── solidguard.json                 # Application configuration
@@ -322,7 +320,7 @@ venv\Scripts\python.exe -m pytest tests -m integration -v
 venv\Scripts\python.exe -m pytest tests/perf -m perf -v -s
 ```
 
-> **测试声明（E8）**：95 项单测（`pytest -m "not integration and not perf"`）全绿；20 项集成测试（`pytest -m integration`）需 Docker 服务栈运行时可执行，服务不可达时自动 SKIP；7 项性能压测（`pytest -m perf`）需显式运行，含 P4-3 函数级并行优化守护（场景 F/G）。以上数字经 `2026-09-01` 实测验证。
+> **测试声明（E8）**：138 项单测（`pytest -m "not integration and not perf"`）全绿；20 项集成测试（`pytest -m integration`）需 Docker 服务栈运行时可执行，服务不可达时自动 SKIP；7 项性能压测（`pytest -m perf`）需显式运行，含 P4-3 函数级并行优化守护（场景 F/G）。以上数字经 `2026-10-18` 实测验证。
 
 ### HTTPS Deployment
 
