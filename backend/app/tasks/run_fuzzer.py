@@ -34,8 +34,9 @@ def run_fuzzer(self, project_id: int) -> None:
         # B2: 任务完成 → Redis 发布事件（SSE 前端刷新依据）
         publish_task_done_sync(project_id, "new_fuzz_results", count=1)
         logger.info(
-            "Fuzzing completed for project %d: %d failures",
+            "Fuzzing completed for project %d: status=%s, %d failures",
             project_id,
+            result.get("status", "unknown"),
             len(result["failures"]) if result["failures"] else 0,
         )
 

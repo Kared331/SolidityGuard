@@ -112,9 +112,12 @@ def aggregate_findings(project_id: int, session: Session) -> dict:
         # failures_json is a list of {"test_name": ..., "counterexample": ...}
         if isinstance(failures, list):
             for item in failures:
+                title = item.get("test_name", "unknown")
+                if item.get("contract"):
+                    title = f"{item['contract']}.{item.get('function') or '?'} ({item.get('risk_type', 'fuzz')})"
                 fuzzing_findings.append(
                     {
-                        "title": item.get("test_name", "unknown"),
+                        "title": title,
                         "description": str(item.get("counterexample", "No counterexample")),
                         "severity": "High",
                         "code_location": item.get("test_name", "N/A"),
