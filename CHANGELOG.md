@@ -402,3 +402,10 @@ SolidGuard 项目更新说明。
 - **口径**：证明的是"提取→入账不丢失"，不是 solc AST 交叉验证；模型质量另见 first-real-llm-run。
 - **新增**：`docs/evidence/run_6a.py`（可重跑）与 `tests/test_coverage_accounting.py`（5 条回归）。
 - **测试**：164 单测（+5）。
+### 2026-10-18 · 6B 固定预算调度实验
+
+- **语料**：143 个 SmartBugs-curated 已标注漏洞合约 + 133 个无已知漏洞的 DeFi/库合约（276）。
+- **结果**：风险排序在 B≥50 时显著优于随机（p=0.040 @50，0.005 @100/150），B=100 时 recall 0.36→0.54；B=10/25 不显著（0.055/0.090）。
+- **口径**：测的是"预算内触及的已知漏洞合约"，不是"检出"；因此不调用模型，结果确定可复现。
+- **新增**：`docs/evidence/run_6b.py`、`fetch_benchmark.py`、`budget-scheduling.md`；解析器补上匿名 fallback（`function ()`）。
+- **测试**：166 单测（+2）。
