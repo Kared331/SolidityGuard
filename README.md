@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 # SolidGuard
 
@@ -17,7 +17,7 @@
 
 ## 项目简介
 
-SolidGuard 是一个集**静态分析**、**模糊测试**与 **LLM 深度审计**于一体的智能合约自动化审计平台，通过 RAG 检索增强生成技术注入 SWC Registry 漏洞知识库，显著提升漏洞检出率与误报控制能力。
+SolidGuard 是一个集**静态分析**、**模糊测试**与 **LLM 深度审计**于一体的智能合约自动化审计平台。LLM 审计会把 SWC Registry 的漏洞知识库作为上下文注入 prompt；**该增强的实际效果尚未被验证**（2026-10-18 检索实测见 `docs/evidence/kb-snapshot.md`）。
 
 ### 核心亮点
 
@@ -56,7 +56,7 @@ docker compose up -d
 | **Static Analysis** | Detect reentrancy, overflow, access control, and 40+ Solidity vulnerability patterns via [Slither](https://github.com/crytic/slither) |
 | **Fuzz Testing** | Foundry 上自动生成 ERC-20 供给守恒不变量测试；无法从源码推导不变量时明确跳过（`no_invariant_derivable`），不生成恒真测试。**范围见 `docs/evidence/fuzz-baseline.md`：这是守恒探针，不是通用漏洞检测器** |
 | **LLM Deep Audit** | AI-powered code review with configurable token budgets, RAG-enhanced context, and multi-provider routing |
-| **RAG Enhancement** | Retrieve similar known vulnerabilities from SWC Registry via ChromaDB to augment LLM context |
+| **RAG Enhancement** | Retrieve similar known vulnerabilities from SWC Registry via ChromaDB to augment LLM context. Retrieval quality is **not** validated (measured top-1 4/10 on 10 hand-written queries; see `docs/evidence/kb-snapshot.md`) |
 | **Multi-Provider LLM** | Unified client supporting OpenAI-compatible APIs and Anthropic Messages API |
 | **False Positive Feedback** | Mark detections as false positive; auto-excluded from subsequent reports |
 | **Multi-format Reports** | Professional audit reports with severity coding (Critical/High/Medium/Low/Info) in HTML / PDF / Word |
@@ -75,7 +75,7 @@ docker compose up -d
 | **Function-level parallelism** (10 functions, mocked LLM) | 689.6 ms | 181.8 ms | **3.79x** |
 | **Embedding I/O** | Sequential per-file | Batched (32/request) | 20x throughput |
 | **Database writes** | N+1 session commits | Single-session batch commit | Atomic & fast |
-| **Test suite** | — | 145 unit + 20 integration + 7 perf | All green |
+| **Test suite** | — | 156 unit + 20 integration + 7 perf | All green |
 
 **Key techniques:** `ThreadPoolExecutor(max_workers=5)` + `Semaphore(5)` for file-level parallelism · **function-level parallelism** (threshold N>5, aligned with LLM Semaphore) for within-file multi-function contracts · batch embedding (limit 32) · single-session batch commit for findings · `TaskDispatcher` Protocol for Service/Task decoupling.
 
@@ -202,6 +202,8 @@ docker compose up -d
 | **3. Retrieve** | Embed function code, query ChromaDB for top-K similar vulnerabilities | Inject known attack patterns |
 | **4. Audit** | LLM receives summary + function body + similar vulnerabilities as context | Enhanced pattern recognition |
 
+> **口径**：知识库是 37 条 SWC 通用描述的离线快照，检索质量**未验证**。2026-10-18 用 10 条人工 query 实测：top-1 命中 4/10、top-3 命中 7/10；重入/溢出/弱随机数均未命中。完整表格与失败案例见 [`docs/evidence/kb-snapshot.md`](docs/evidence/kb-snapshot.md)。
+
 ---
 
 ## Configuration
@@ -242,7 +244,7 @@ SolidGuard uses a **JSON config file** (`solidguard.json`) for application setti
 | **Projects** | `POST /api/v1/projects` (upload) · `GET /api/v1/projects/{id}` |
 | **Analysis** | `POST /api/v1/projects/{id}/analyze` (Slither) · `/fuzz` (Foundry) · `/llm-audit` (LLM) |
 | **Reports** | `POST /api/v1/projects/{id}/report` · `GET /api/v1/reports/{id}/download` |
-| **Knowledge** | `POST /api/v1/knowledge/sync` (SWC Registry) · `GET /api/v1/vulnerabilities` |
+| **Knowledge** | `POST /api/v1/knowledge/sync` (默认读离线 37 条快照；`?refresh=true` 才访问上游) · `GET /api/v1/vulnerabilities` |
 | **Real-time** | `GET /api/v1/projects/{id}/events` (SSE stream) |
 | **Health** | `GET /health` |
 
@@ -274,7 +276,7 @@ SolidGuard/
 ├── frontend/
 │   ├── src/                        # React + TypeScript (pages, design-system, hooks, stores)
 │   └── nginx.conf                  # Reverse proxy + SPA fallback
-├── tests/                          # 145 unit + 20 integration + 7 perf benchmarks
+├── tests/                          # 156 unit + 20 integration + 7 perf benchmarks
 ├── manage.ps1                      # Windows management portal
 ├── docker-compose.yml              # Service orchestration
 ├── solidguard.json                 # Application configuration
@@ -320,7 +322,7 @@ venv\Scripts\python.exe -m pytest tests -m integration -v
 venv\Scripts\python.exe -m pytest tests/perf -m perf -v -s
 ```
 
-> **测试声明（E8）**：145 项单测（`pytest -m "not integration and not perf"`）全绿；20 项集成测试（`pytest -m integration`）需 Docker 服务栈运行时可执行，服务不可达时自动 SKIP；7 项性能压测（`pytest -m perf`）需显式运行，含 P4-3 函数级并行优化守护（场景 F/G）。以上数字经 `2026-10-18` 实测验证。
+> **测试声明（E8）**：156 项单测（`pytest -m "not integration and not perf"`）全绿；20 项集成测试（`pytest -m integration`）需 Docker 服务栈运行时可执行，服务不可达时自动 SKIP；7 项性能压测（`pytest -m perf`）需显式运行，含 P4-3 函数级并行优化守护（场景 F/G）。以上数字经 `2026-10-18` 实测验证。
 
 ### HTTPS Deployment
 
@@ -373,7 +375,9 @@ The config module caches file mtime. On each config access, if mtime changed, th
 <details>
 <summary><b>How does RAG improve the LLM audit?</b></summary>
 
-Before auditing each function, the system embeds the function code and queries ChromaDB for top-K similar known vulnerabilities from the SWC Registry. These are injected into the LLM prompt as context, enabling pattern recognition the model might otherwise miss.
+Before auditing each function, the system embeds the function code and queries ChromaDB for top-K similar known vulnerabilities from the SWC Registry. These are injected into the LLM prompt as context.
+
+**This does not mean it works**: retrieval was measured on 10 hand-written queries with a top-1 hit rate of 4/10 (see `docs/evidence/kb-snapshot.md`). The effect of RAG on detection quality has never been measured.
 
 </details>
 

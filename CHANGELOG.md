@@ -10,8 +10,15 @@ SolidGuard 项目更新说明。
 
 > 待规划变更。
 
-### 2026-10-18 · 审计完整性 P3（Fuzzer）
+### 2026-10-18 · 审计完整性 P4（知识库）
 
+- **SWC 离线快照**：37 条随代码入库（`services/engine/data/swc_registry.json`），默认同步不再联网；`?refresh=true` 才访问已归档的上游仓库，且结果必须通过条数/字段校验。
+- **版本化**：`kb_version = swc-<hash8>`（实测 `swc-52c82b8a`）写入 `audit_runs`，报告显示 model / prompt / KB 三版本。
+- **修复静默缺陷**：Chroma 从未写入 metadata，检索标题恒为 `Unknown`；已补 `metadatas` 并重同步。
+- **检索实测**：10 条人工 query，top-1 命中 4/10、top-3 7/10；README 删除"显著提升检出率"的表述，改为"效果未验证"。
+- **测试**：156 单测（+11）。
+
+### 2026-10-18 · 审计完整性 P3（Fuzzer）
 - **重写 `services/engine/fuzzer.py`**：旧实现生成的测试必然编译失败（无 import、无构造参数、签名不符），且编译失败被当作"0 失败"。新实现按真实签名生成、临时目录执行、输出截断 64KB。
 - **唯一不变量**：ERC-20 供给守恒（`totalSupply` + 余额 getter + `transfer` + 单参支出函数）。不可推导时返回 `no_invariant_derivable`，不生成恒真测试。
 - **实测**：`VulnerableToken` 产出真实失败（`assertion failed: 0 != 1`，`withdraw / supply_conservation`）；`SimpleToken` 正确跳过；`uploads/47` 不再被污染。

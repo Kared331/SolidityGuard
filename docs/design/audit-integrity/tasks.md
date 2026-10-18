@@ -106,7 +106,7 @@
 
 ---
 
-## 刀 3 — SWC 快照化（0.5–1 天）
+## 刀 3 — SWC 快照化（0.5–1 天，✅ 已完成 2026-10-18）
 
 **目标**：知识库离线可复现、有版本、可回归。
 
@@ -114,34 +114,33 @@
 
 | 文件 | 动作 |
 |---|---|
-| `backend/app/services/engine/data/swc_registry.json` | **新增**离线快照（37 条） |
-| `backend/scripts/build_swc_snapshot.py` | **新增**生成脚本（一次性联网，产物入库） |
-| `backend/app/services/engine/swc_sync.py` | 默认读快照；`refresh=true` 才联网；schema + 条目数校验后落库 |
-| `backend/app/services/engine/swc_sync.py` | 导出 `kb_version()`；写入 `audit_runs.kb_version` |
-| `backend/app/services/knowledge_service.py` | upsert 幂等（按 `swc_id`） |
+| `backend/app/services/engine/data/swc_registry.json` | **新增**离线快照（37 条，88 KB） |
+| `backend/app/services/engine/swc_sync.py` | 默认读快照；`refresh=true` 才联网；schema + 条目数校验；`kb_version()` = 条目集 hash |
+| `backend/app/tasks/sync_swc.py` | 按 `swc_id` 幂等 upsert；Chroma 写入 **metadatas**（修复 title 恒为 Unknown） |
+| `backend/app/tasks/run_llm_audit.py` | `audit_runs.kb_version` 落库 |
+| `backend/app/api/knowledge.py` / `knowledge_service.py` | `?refresh=true` 才联网，默认快照 |
+| `backend/app/services/templates/report.html.jinja2` | 覆盖率段显示 model / prompt / KB 版本 |
 
-### 测试（先红）
+### 测试
 
-`tests/test_swc_snapshot.py`
+`tests/test_swc_snapshot.py`（11 条）
 
-| 用例 | 断言 |
+| 组 | 断言 |
 |---|---|
-| 快照加载 | 恰好 37 条、字段齐全 |
-| schema 校验 | 缺字段的条目被拒绝 |
-| 重复同步 | 条目数不变（幂等） |
-| `kb_version` | 同快照两次调用一致；改一字节则变化 |
-
-`tests/rag/test_retrieval_golden.py`（`@pytest.mark.rag`，不进默认 CI）
-
-| 用例 | 断言 |
-|---|---|
-| 10 条固定 query | top-1 `swc_id` 在两次运行间一致 |
+| 加载与校验 | 37 条、id 唯一、字段非空；条数/字段不符抛错 |
+| 版本 | 稳定；条目改动后变化 |
+| 离线 | 默认路径下 `httpx.get` 抛异常也不会被调用 |
+| 刷新 | `refresh=True` 用拉取结果，`source=refresh` |
+| Chroma | metadata 全为字符串、无 None；文档含 title |
+| 幂等 | 新条目 `add`、已有条目只更新不新增 |
 
 ### DoD
 
-- [ ] 断网可同步（快照路径生效）；
-- [ ] 报告页脚显示 `kb_version`；
-- [ ] 检索 golden 测试可稳定通过（同模型、同机器）。
+- [x] 断网可同步（快照路径生效）；
+- [x] 报告页脚显示 `kb_version`（实测 `swc-52c82b8a`）；
+- [x] 重复同步幂等（`vulnerability_entries` 仍 37 行）；
+- [x] Chroma metadata 修复（title 不再是 `Unknown`）；
+- [ ] 检索 golden 测试：**未落地为 pytest**（依赖本地模型与 Chroma 状态，易变环境测试），改为可重跑探针 + 证据表；实测 top-1 4/10。
 
 ---
 
