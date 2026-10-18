@@ -166,11 +166,17 @@ def extract_functions(source: str) -> list[FunctionUnit]:
         if kind == "function":
             ident = _IDENT.match(masked, j)
             if ident is None:
-                continue  # e.g. `function (uint) external` type expression
-            name = ident.group(0)
-            j = ident.end()
-            while j < len(masked) and masked[j].isspace():
-                j += 1
+                # Anonymous fallback (`function () public payable {}`), used by
+                # pre-0.6 contracts. A function-type variable declaration
+                # (`function (uint) external returns (uint) f;`) also has no
+                # name, but ends with ';' -> filtered by the body check below.
+                name = "fallback"
+                kind = "fallback"
+            else:
+                name = ident.group(0)
+                j = ident.end()
+                while j < len(masked) and masked[j].isspace():
+                    j += 1
         else:
             name = kind
 

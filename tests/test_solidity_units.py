@@ -105,6 +105,27 @@ def test_vulnerable_token_unit_set():
     ]
 
 
+def test_anonymous_fallback_is_a_unit():
+    """Pre-0.6 `function () public payable {}` must be audited, not skipped."""
+    src = "contract C {\n    function () public payable { require(msg.value > 0); }\n}\n"
+
+    units = extract_functions(src)
+
+    assert [(u.name, u.kind) for u in units] == [("fallback", "fallback")]
+
+
+def test_function_type_variable_is_not_a_unit():
+    """A function-type variable has no name and no body; it is not a unit."""
+    src = (
+        "contract C {\n"
+        "    function (uint256) external returns (uint256) cb;\n"
+        "    function f() public { require(true); }\n"
+        "}\n"
+    )
+
+    assert [u.name for u in extract_functions(src)] == ["f"]
+
+
 def test_nested_braces_and_line_numbers():
     """Body must survive nesting; line range must cover the whole function."""
     src = """contract C {
