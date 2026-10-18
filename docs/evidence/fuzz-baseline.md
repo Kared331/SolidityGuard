@@ -56,6 +56,8 @@ Error (7920): Identifier not found or not unique.
 生成逻辑：转给一个随机 actor → 以 actor 身份调用支出函数 → 断言
 `getter(actor) + getter(this) == totalSupply`。
 
+**第二个污染向量（本轮新发现）**：`forge` 的 `cache/`、`out/` 默认相对**进程 cwd** 解析。worker 里 cwd=/app（挂载到 `backend/`），于是测试跑完在仓库里出现 `backend/cache/fuzz/failures/...`。已同时用 `cwd=<workspace>` 与 `FOUNDRY_CACHE_PATH` / `FOUNDRY_OUT` 固定到临时目录，复测后 `backend/cache` 不再出现。
+
 ---
 
 ## 3. 实测结果

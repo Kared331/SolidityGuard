@@ -291,12 +291,21 @@ contract Fuzz_{contract.name} is Test {{
 
 
 def _run_forge(root: str) -> tuple[str, str]:
+    # forge resolves cache/out against the process cwd even with --root set;
+    # pin them inside the workspace so the app directory stays clean.
+    env = {
+        **os.environ,
+        "FOUNDRY_CACHE_PATH": os.path.join(root, "cache"),
+        "FOUNDRY_OUT": os.path.join(root, "out"),
+    }
     try:
         proc = subprocess.run(
             ["forge", "test", "-vvv", "--root", root, "--match-path", "test/SolidGuardFuzz.t.sol"],
             capture_output=True,
             text=True,
             timeout=FORGE_TIMEOUT,
+            env=env,
+            cwd=root,
         )
     except subprocess.TimeoutExpired:
         return f"Forge test timed out after {FORGE_TIMEOUT}s", "timeout"
@@ -376,6 +385,7 @@ class FuzzerEngine(BaseEngine):
                         capture_output=True,
                         text=True,
                         timeout=180,
+                        cwd=workspace,
                     )
                 except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
                     self.logger.warning("forge init failed: %s", exc)

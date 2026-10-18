@@ -87,3 +87,7 @@ backend/solidguard.json
 # ─── Agent tooling (local only) ─────────────────────────────────
 .workbuddy/
 skills/
+
+# ─── Foundry build artifacts (if forge runs with cwd=backend) ───
+backend/cache/
+backend/out/
