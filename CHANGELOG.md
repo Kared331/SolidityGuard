@@ -395,3 +395,10 @@ SolidGuard 项目更新说明。
 - **修复**：可选字段 + prompt 对齐 + 回归测试。
 - **结果**：同一合约产出 9 条 finding，其中 `withdraw` 的 SWC-107 重入被 Critical 命中。
 - **记录**：`docs/evidence/first-real-llm-run.md`。
+### 2026-10-18 · 6A 覆盖可核算性实验
+
+- **实验**：4 类故障（budget / rag_failure / llm_error / parse_error）× 100 次随机注入，全部被账本标记，Clopper–Pearson 95% 下界 **0.9705**。
+- **单元守恒**：corpus 20 个合约，账本单元数 == 提取数，四项恒等式成立，失配 0。
+- **口径**：证明的是"提取→入账不丢失"，不是 solc AST 交叉验证；模型质量另见 first-real-llm-run。
+- **新增**：`docs/evidence/run_6a.py`（可重跑）与 `tests/test_coverage_accounting.py`（5 条回归）。
+- **测试**：164 单测（+5）。

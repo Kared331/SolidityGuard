@@ -30,7 +30,7 @@
 | **D4** | 注释里的 `function` 被当真函数 | 同上 §4 | 已修 | P0 |
 | **D5** | 字符串 `}` 截断 body | 同上 §4 | 已修 | P0 |
 | **D6** | 覆盖率不可见（实际只审 58.2% 字节） | 同上 §3 | 未修 | P1 |
-| **O1** | `severity="unknown"` 把故障混入 findings | [L339](../../../backend/app/services/engine/llm_audit.py#L339)/[L357](../../../backend/app/services/engine/llm_audit.py#L357)/[L383](../../../backend/app/services/engine/llm_audit.py#L383) | 未修 | P1 |
+| **O1** | `severity="unknown"` 把故障混入 findings | [llm_audit.py](../../../backend/app/services/engine/llm_audit.py) | 已修（P1） | P1 |
 | **O2** | 预算耗尽静默丢函数 | [L297](../../../backend/app/services/engine/llm_audit.py#L297) | 未修 | P1 |
 | **O3** | RAG 失败静默退化为裸 LLM | [L505](../../../backend/app/services/engine/llm_audit.py#L505) | 未修 | P1 |
 | **O4** | solc 回退对跨文件项目静默全空 | `slither.py` | 未修 | P2（与账本不同表，避免混任务） |
@@ -290,16 +290,23 @@ U:  functions_extracted = audited + skipped + failed + filtered   （仅统计 p
 
 ### P6 — 研究命题（唯一能回答最初问题的阶段）
 
-**前提**：P1–P5 完成，且具备真实 LLM key（当前 `LLM_API_KEY` 为空）。
+**前提**：P1–P5 完成。`LLM_API_KEY` 已于 2026-10-18 配置（DeepSeek），6B 具备运行条件。
 
 分两条支线，**按资源选一条，不要都做**：
 
-#### 6A — 覆盖可核算性（无需真实 key，可先用故障注入）
+#### 6A — 覆盖可核算性（✅ 已完成 2026-10-18）
 
 - **命题**：现有 LLM 审计工具无法回答"哪些代码被审过、结论在何种降级下产生"；本系统对三类降级做到 100% 可追溯。
 - **实验**：N ≥ 100 次故障注入，标记率 100%（Clopper–Pearson 95% 下界）；20 个合约的"已审集合"与 AST 真值集合相等。
 - **能声明**：工程保证（可复现、可验证）。
 - **不能声明**：检出率、SOTA 对比。这条要写清楚，否则又变成过度声明。
+
+**实测**（证据：[`evidence/coverage-accounting.md`](../../evidence/coverage-accounting.md)）：
+
+- 4 类故障（budget / rag_failure / llm_error / parse_error）× 100 次随机注入，**全部标记**，CP 95% 下界 **0.9705**。
+- 20 个合约：账本单元数 == 提取数，四项恒等式全部成立，失配 0。
+- 口径修正：实验证明的是"**提取→入账不丢失**"，不是"提取 == solc AST"。后者只有 P0 的自研参考扫描器对比（176 文件）。声明里必须分开写。
+- 未覆盖：并发竞态、DB/Redis 故障、磁盘满。
 
 #### 6B — 固定预算下的调度（需 key + 费用）
 
@@ -381,7 +388,7 @@ U:  functions_extracted = audited + skipped + failed + filtered   （仅统计 p
 | **L0** | 现在 | 无可声明 |
 | **L1** | P2 后 | "三阶段审计流水线可运行，单测/集成/E2E 全绿" |
 | **L2** | P1+P2 | "审计覆盖可核算：每个函数的状态（已审/跳过/失败）与原因均可追溯" |
-| **L3** | P6-A | "在 100 次故障注入下，三类降级 100% 被标记；覆盖率与 AST 真值一致" |
+| **L3** | P6-A ✅ | "4 类故障 × 100 次注入，100% 被标记（CP 95% 下界 0.9705）；账本单元数 == 提取数。注意：这是账本完整性，不是 solc AST 交叉验证，也不是检测质量" |
 | **L4** | P6-B | "在固定预算 B 下，风险排序调度的 recall@B 显著高于文件序基线（p < 0.05）" |
 
 **每一层只允许写该层的话。** 越级声明就是上一轮被指出的问题重演。
