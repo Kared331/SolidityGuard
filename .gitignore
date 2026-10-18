@@ -83,3 +83,7 @@ MODIFICATION_BLUEPRINT.md
 
 # ─── Local config duplicates ────────────────────────────────────
 backend/solidguard.json
+
+# ─── Agent tooling (local only) ─────────────────────────────────
+.workbuddy/
+skills/
