@@ -117,3 +117,27 @@ curl -X POST "$SG_URL/api/v1/projects/$SG_PROJECT/incremental-audit" \
 - `tests/test_audit_compare.py`（2）：对比分类、跨项目拒绝。
 
 全量 **179 passed**。
+
+---
+
+## 7. UI（审计运行 tab）
+
+为避免把"运行"塞进现有的 findings 视图，新增了第 4 个 tab「审计运行」，master-detail：
+
+| 区域 | 内容 |
+|---|---|
+| 左：运行列表 | `#id`、全量/增量、状态、`审 N / 共 M`、发现数；轮询仅在 `status=running` 时开启 |
+| 右：运行详情 | 五段覆盖率条（已审/预算跳过/失败/关键词过滤/未变更）、统计卡、增量计划（changed/unchanged、整文件回退标记）、逐函数账本 |
+| 触发 | 粘贴 unified diff → `POST /projects/{id}/incremental-audit` |
+| 对比 | 勾选两次运行 → 新增/消失/仍存在三列 |
+
+对应只读接口：
+
+```http
+GET /api/v1/projects/{id}/runs
+GET /api/v1/runs/{id}
+```
+
+前端构建通过（`tsc && vite build`），产物 chunk 中含该 tab；服务端已重建镜像并在 3000 端口提供服务。
+
+**未做**：diff 语法高亮、图表库、按 run 过滤 findings、运行分页——这些对答辩演示加分有限。

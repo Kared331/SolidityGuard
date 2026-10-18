@@ -342,6 +342,7 @@ U:  functions_extracted = audited + skipped + failed + filtered   （仅统计 p
 | 4. 变更影响面提示 | ✅ `details_json.incremental` + 报告 Unchanged 行（仅同文件上下文） |
 | 5. CI 触发（Action / Webhook） | ✅ `.github/workflows/solidguard-incremental.yml.example`（接口已验证，未在真实 runner 跑过） |
 | 6. 两次审计报告对比 | ✅ `GET /runs/{base}/compare/{head}` |
+| 7. UI（审计运行视图） | ✅ ProjectDetail 新 tab：运行列表 + 五段覆盖率条 + 增量计划 + 触发 Drawer + 对比 Drawer |
 
 **端到端实测**（[`evidence/incremental-pipeline.md`](../../evidence/incremental-pipeline.md)）：项目 #68，全量 8 函数 → 增量 1 审 7 未变，对比 `added=1 / removed=19 / persisted=2`，报告含 Unchanged 行。
 
