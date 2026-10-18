@@ -10,6 +10,14 @@ SolidGuard 项目更新说明。
 
 > 待规划变更。
 
+### 2026-10-18 · 审计完整性 P3（Fuzzer）
+
+- **重写 `services/engine/fuzzer.py`**：旧实现生成的测试必然编译失败（无 import、无构造参数、签名不符），且编译失败被当作"0 失败"。新实现按真实签名生成、临时目录执行、输出截断 64KB。
+- **唯一不变量**：ERC-20 供给守恒（`totalSupply` + 余额 getter + `transfer` + 单参支出函数）。不可推导时返回 `no_invariant_derivable`，不生成恒真测试。
+- **实测**：`VulnerableToken` 产出真实失败（`assertion failed: 0 != 1`，`withdraw / supply_conservation`）；`SimpleToken` 正确跳过；`uploads/47` 不再被污染。
+- **范围声明**：这是守恒探针，不是通用漏洞检测器；**重入不在能力内**。
+- **测试**：145 单测（+7）。
+
 ### 2026-10-18 · 审计完整性 P0–P2
 
 - **提取层**：新增 `services/engine/solidity_units.py`（掩码注释/字符串 + 括号配对），替换正则+关键词白名单。实测 57 个真实文件：提取单元 1896 = 参考真值，漏/噪 0；`constructor`/`receive`/`fallback` 不再被跳过。旧实现的问题记录于 `docs/evidence/extraction-baseline.md`。

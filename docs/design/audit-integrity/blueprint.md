@@ -13,7 +13,7 @@
 
 总蓝图分 7 个阶段。前 6 个阶段的唯一目的，是让第 7 阶段（研究命题）**具备被测量和被证伪的资格**；不是为了让系统"更完备"。
 
-**现在处在 P2 结束**：提取（P0）、账本（P1）、主链路验证（P2）均已完成，证据见 `docs/evidence/`。下一步 P3/P4/P5；P6 需要真实 LLM key。
+**现在处在 P3 结束**：提取（P0）、账本（P1）、主链路验证（P2）、Fuzzer（P3，范围收窄）均已完成，证据见 `docs/evidence/`。下一步 P4/P5；P6 需要真实 LLM key。
 
 ---
 
@@ -36,10 +36,10 @@
 | **O4** | solc 回退对跨文件项目静默全空 | `slither.py` | 未修 | P2（与账本不同表，避免混任务） |
 | **C1** | Chroma 重试谓词退化为裸 `Exception` | `chroma_client.py` | 未修 | P1 |
 | **O6** | 重复审计导致 finding 在报告里重复计入 | [report_generator.py:89](../../../backend/app/services/report_generator.py#L89) | 未修 | P1 |
-| **E1** | Fuzzer 恒真断言，假阴性 100% | [fuzzer.py#L77-L100](../../../backend/app/services/engine/fuzzer.py#L77-L100) | 未修 | P3 |
-| **E2** | `forge init --force` 污染上传目录 | ISS-10 | 未修 | P3 |
-| **E3** | `-vvv` 输出无上限入库 | ISS-11 | 未修 | P3 |
-| **E4** | fuzz 失败无法映射到合约/风险类型 | ISS-12 | 未修 | P3 |
+| **E1** | Fuzzer 恒真断言，假阴性 100% | [fuzzer.py](../../../backend/app/services/engine/fuzzer.py) | 已修（P3，范围收窄） | P3 |
+| **E2** | `forge init --force` 污染上传目录 | ISS-10 | 已修（P3） | P3 |
+| **E3** | `-vvv` 输出无上限入库 | ISS-11 | 已修（P3） | P3 |
+| **E4** | fuzz 失败无法映射到合约/风险类型 | ISS-12 | 已修（P3） | P3 |
 | **K1** | SWC 运行时联网拉取、无版本 | `swc_sync.py` | 未修 | P4 |
 | **K2** | 检索无回归基线 | 无 | 未修 | P4 |
 | **V1** | 集成 / E2E / 性能测试未在改动后运行 | docker 未启动 | 未验证 | P2 |
@@ -225,7 +225,7 @@ U:  functions_extracted = audited + skipped + failed        （仅统计 process
 
 ---
 
-### P3 — Fuzzer 真实性（1.5–2 天）
+### P3 — Fuzzer 真实性（1.5–2 天，✅ 已完成 2026-10-18，范围收窄）
 
 **目标**：让第三阶段真的能发现东西，或诚实地承认它不能。
 
@@ -233,8 +233,15 @@ U:  functions_extracted = audited + skipped + failed        （仅统计 process
 |---|---|
 | 改动 | 按真实函数签名生成调用；构造函数带参；用不变量断言替代 `try/catch` 空转；`raw_output` 截断 64KB；`forge` 在临时目录执行 |
 | 测试 | fixture 上 `forge build` 通过；重入不变量能触发失败并给出 counterexample；上传目录前后哈希一致 |
-| 验收 | `VulnerableToken.withdraw` 的 SWC-107 能被 fuzz 真实触发 |
+| 验收 | ~~`VulnerableToken.withdraw` 的 SWC-107 能被 fuzz 真实触发~~ |
 | 若失败 | 如果 2 天内无法触发，**直接把 fuzzer 从"三阶段"降级为"可选实验功能"**，并在 README 里写明。这比留一个假阴性 100% 的引擎诚实 |
+
+**实测结果**（证据：[`evidence/fuzz-baseline.md`](../../evidence/fuzz-baseline.md)）：
+
+- 改造前：生成测试**编译失败**（无 import、无构造参数、签名不符），而 `failures=None` → 对外呈现"0 漏洞"；同时 `forge init --force` 污染了 `uploads/47`。
+- 改造后：`VulnerableToken` 产出**真实失败**——`assertion failed: 0 != 1`，counterexample `args=[1797, 3557]`，映射到 `withdraw / supply_conservation`；`SimpleToken` 返回 `no_invariant_derivable` 而不是生成恒真测试；`uploads/47` 前后无新增文件。
+- **范围收窄**：只实现了 ERC-20 供给守恒探针。**重入没有做到，也不应声称做到**——通用 fuzzer 无法凭空构造攻击者合约。原验收项（SWC-107）据此划掉，而不是含糊过去。
+- 全量测试 145 passed（+7 条 fuzzer 单测）。
 
 ---
 

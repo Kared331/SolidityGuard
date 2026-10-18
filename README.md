@@ -54,7 +54,7 @@ docker compose up -d
 | Feature | Description |
 |---------|-------------|
 | **Static Analysis** | Detect reentrancy, overflow, access control, and 40+ Solidity vulnerability patterns via [Slither](https://github.com/crytic/slither) |
-| **Fuzz Testing** | Property-based fuzzing with automatic test generation via [Foundry](https://github.com/foundry-rs/foundry) |
+| **Fuzz Testing** | Foundry 上自动生成 ERC-20 供给守恒不变量测试；无法从源码推导不变量时明确跳过（`no_invariant_derivable`），不生成恒真测试。**范围见 `docs/evidence/fuzz-baseline.md`：这是守恒探针，不是通用漏洞检测器** |
 | **LLM Deep Audit** | AI-powered code review with configurable token budgets, RAG-enhanced context, and multi-provider routing |
 | **RAG Enhancement** | Retrieve similar known vulnerabilities from SWC Registry via ChromaDB to augment LLM context |
 | **Multi-Provider LLM** | Unified client supporting OpenAI-compatible APIs and Anthropic Messages API |
@@ -75,7 +75,7 @@ docker compose up -d
 | **Function-level parallelism** (10 functions, mocked LLM) | 689.6 ms | 181.8 ms | **3.79x** |
 | **Embedding I/O** | Sequential per-file | Batched (32/request) | 20x throughput |
 | **Database writes** | N+1 session commits | Single-session batch commit | Atomic & fast |
-| **Test suite** | — | 138 unit + 20 integration + 7 perf | All green |
+| **Test suite** | — | 145 unit + 20 integration + 7 perf | All green |
 
 **Key techniques:** `ThreadPoolExecutor(max_workers=5)` + `Semaphore(5)` for file-level parallelism · **function-level parallelism** (threshold N>5, aligned with LLM Semaphore) for within-file multi-function contracts · batch embedding (limit 32) · single-session batch commit for findings · `TaskDispatcher` Protocol for Service/Task decoupling.
 
@@ -274,7 +274,7 @@ SolidGuard/
 ├── frontend/
 │   ├── src/                        # React + TypeScript (pages, design-system, hooks, stores)
 │   └── nginx.conf                  # Reverse proxy + SPA fallback
-├── tests/                          # 138 unit + 20 integration + 7 perf benchmarks
+├── tests/                          # 145 unit + 20 integration + 7 perf benchmarks
 ├── manage.ps1                      # Windows management portal
 ├── docker-compose.yml              # Service orchestration
 ├── solidguard.json                 # Application configuration
@@ -320,7 +320,7 @@ venv\Scripts\python.exe -m pytest tests -m integration -v
 venv\Scripts\python.exe -m pytest tests/perf -m perf -v -s
 ```
 
-> **测试声明（E8）**：138 项单测（`pytest -m "not integration and not perf"`）全绿；20 项集成测试（`pytest -m integration`）需 Docker 服务栈运行时可执行，服务不可达时自动 SKIP；7 项性能压测（`pytest -m perf`）需显式运行，含 P4-3 函数级并行优化守护（场景 F/G）。以上数字经 `2026-10-18` 实测验证。
+> **测试声明（E8）**：145 项单测（`pytest -m "not integration and not perf"`）全绿；20 项集成测试（`pytest -m integration`）需 Docker 服务栈运行时可执行，服务不可达时自动 SKIP；7 项性能压测（`pytest -m perf`）需显式运行，含 P4-3 函数级并行优化守护（场景 F/G）。以上数字经 `2026-10-18` 实测验证。
 
 ### HTTPS Deployment
 

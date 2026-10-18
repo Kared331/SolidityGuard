@@ -145,7 +145,7 @@
 
 ---
 
-## 刀 4 — Fuzzer 判定（1.5–2 天，独立）
+## 刀 4 — Fuzzer 判定（1.5–2 天，✅ 已完成 2026-10-18，范围收窄）
 
 **目标**：`forge test` 能真实发现不一致，而不是恒真断言。
 
@@ -154,25 +154,31 @@
 | 文件 | 动作 |
 |---|---|
 | `backend/app/services/engine/fuzzer.py` | 解析函数签名（参数类型列表），按签名生成调用；构造函数按签名生成参数 |
-| `backend/app/services/engine/fuzzer.py` | 弃用 `try/catch` 空转与 `assertEq(x,x)`；改为不变量模板（余额守恒、权限不变、总量守恒） |
-| `backend/app/services/engine/fuzzer.py` | fuzz 目标优先取 Slither/LLM 已标记的高危函数 |
+| `backend/app/services/engine/fuzzer.py` | 弃用 `try/catch` 空转与 `assertEq(x,x)`；改为**ERC-20 供给守恒**不变量（唯一实现的不变量） |
+| `backend/app/services/engine/fuzzer.py` | fuzz 目标优先取 Slither/LLM 已标记的高危函数 —— **未做**（见下） |
+| `backend/app/tasks/run_fuzzer.py` | 日志带 `status`（ok / compile_error / no_invariant_derivable / timeout / forge_missing） |
+| `backend/app/services/report_generator.py` | fuzz finding 标题改为 `Contract.function (risk_type)` |
 
 ### 测试
 
 | 用例 | 断言 |
 |---|---|
-| 生成代码对 `VulnerableToken.sol` | `forge build` 通过（integration） |
-| 重入不变量 | 触发失败并产出 counterexample |
-| 无参函数 / 带参构造函数 | 生成正确 |
-| 生成代码语法 | 不出现 `func(x)` 这类签名不匹配调用 |
+| 生成代码对 `VulnerableToken.sol` | `forge build` 通过（容器内实跑） |
+| 守恒不变量 | 触发失败并产出 counterexample（实测 `args=[1797, 3557]`） |
+| 带参构造函数 | 生成 `new VulnerableToken(uint256(1))` |
+| 生成代码语法 | 不出现 `func(x)` 这类签名不匹配调用；不出现 `assertEq(x, x)` |
+| 不可推导时 | `no_invariant_derivable`，不写测试文件 |
 
 ### DoD
 
-- [ ] `forge test` 在 fixture 上能产出至少一条真实失败；
-- [ ] `raw_output` 截断到 64KB；
-- [ ] fuzz 在临时工作目录执行，不污染上传目录（ISS-10）。
+- [x] `forge test` 在 fixture 上产出至少一条真实失败；
+- [x] `raw_output` 截断到 64KB；
+- [x] fuzz 在临时工作目录执行，不污染上传目录（`uploads/47` 实测前后一致）；
+- [x] 失败带 `contract` / `function` / `risk_type` 落库；
+- [ ] **重入检测**：未实现，通用 fuzzer 无法凭空构造攻击者合约；已在 README 与证据文档中划清范围；
+- [ ] 高危函数优先取 Slither/LLM 结果：未做，等 P5 后按需要再加。
 
-> 前置条件：本机需安装 Foundry。若 CI 无 forge，本刀测试全部走 `-m integration` 并允许 SKIP，但**必须在本地实跑一次并留证据**。
+> 环境：宿主无 Foundry，真实运行在 worker 容器（`forge 1.7.1`）完成；单测覆盖生成器逻辑，不依赖 forge。
 
 ---
 
