@@ -67,7 +67,7 @@
                     <tr><th>Skipped</th><td>{{ audit_coverage.skipped }}{% if audit_coverage.skip_reasons %}: {% for reason, count in audit_coverage.skip_reasons.items() %}{{ reason }}={{ count }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</td></tr>
                     <tr><th>Failed</th><td>{{ audit_coverage.failed }}{% if audit_coverage.fail_reasons %}: {% for reason, count in audit_coverage.fail_reasons.items() %}{{ reason }}={{ count }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</td></tr>
                     <tr><th>Coverage</th><td>{{ "%.1f"|format(audit_coverage.coverage * 100) }}%</td></tr>
-                    <tr><th>Model / prompt</th><td>{{ audit_coverage.agent.model or "-" }} / {{ audit_coverage.agent.prompt_version or "-" }}</td></tr>
+                    <tr><th>Model / prompt / KB</th><td>{{ audit_coverage.agent.model or "-" }} / {{ audit_coverage.agent.prompt_version or "-" }} / {{ audit_coverage.agent.kb_version or "-" }}</td></tr>
                 </tbody>
             </table>
             {% else %}

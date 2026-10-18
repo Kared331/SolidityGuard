@@ -24,6 +24,7 @@ from app.llm.config import get_config
 from app.llm.pipeline.stream import publish_task_done_sync
 from app.models import AuditRun, LLMAuditResult, ProjectFile
 from app.services.engine.llm_audit import PROMPT_VERSION, LLMAuditEngine
+from app.services.engine.swc_sync import kb_version
 from app.services.infra.storage import get_project_file_path
 
 logger = logging.getLogger("solidguard.tasks.run_llm_audit")
@@ -113,6 +114,7 @@ def _create_run(project_id: int, files_total: int) -> int:
             status="running",
             model=get_config().get_default_provider().defaultModel or None,
             prompt_version=PROMPT_VERSION,
+            kb_version=kb_version(),
             files_total=files_total,
         )
         session.add(run)

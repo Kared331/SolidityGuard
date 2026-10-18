@@ -7,11 +7,14 @@ from app.models import VulnerabilityEntry
 from app.services.task_dispatcher import _apply_with_connection
 
 
-def trigger_swc_sync() -> None:
-    """发布 SWC 同步任务（显式连接，绕 producer pool hostname 丢失）。"""
+def trigger_swc_sync(refresh: bool = False) -> None:
+    """发布 SWC 同步任务（显式连接，绕 producer pool hostname 丢失）。
+
+    refresh=False 时读离线快照；refresh=True 才访问已归档的上游仓库。
+    """
     from app.tasks.sync_swc import sync_swc
 
-    _apply_with_connection(lambda conn: sync_swc.apply_async(connection=conn))
+    _apply_with_connection(lambda conn: sync_swc.apply_async(kwargs={"refresh": refresh}, connection=conn))
 
 
 async def search_vulnerabilities(

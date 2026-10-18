@@ -1,9 +1,28 @@
+"""SWC knowledge base: offline snapshot by default, network only on refresh.
+
+The upstream SWC registry has been archived since 2020; fetching it at runtime
+made the knowledge base dependent on an archived repo and on network access.
+The 37 entries now ship as a JSON snapshot next to this module.
+
+`kb_version` is a hash of the entry set actually used (snapshot or refresh), so
+an audit run can record exactly which knowledge base it saw.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
 import os
 import re
+from pathlib import Path
 
 import httpx
 
 from app.services.engine.base import BaseEngine
+
+SNAPSHOT_PATH = Path(__file__).with_name("data") / "swc_registry.json"
+EXPECTED_ENTRIES = 37
+REQUIRED_FIELDS = ("swc_id", "title", "description")
 
 # SWC Registry 官方标题（https://swcregistry.io，2018 定稿后保持稳定）。
 # 上游仓库（SmartContractSecurity/SWC-registry）已于 2020 年后归档，所有
@@ -56,8 +75,35 @@ _DEPRECATED_BANNER = re.compile(
 )
 
 
+def validate_entries(entries: list[dict]) -> list[dict]:
+    """Reject a knowledge base that could silently degrade retrieval."""
+    if len(entries) != EXPECTED_ENTRIES:
+        raise ValueError(f"SWC entries: expected {EXPECTED_ENTRIES}, got {len(entries)}")
+    ids = [e.get("swc_id") for e in entries]
+    if len(set(ids)) != len(ids):
+        raise ValueError("SWC entries: duplicate swc_id")
+    for entry in entries:
+        for field in REQUIRED_FIELDS:
+            if not str(entry.get(field) or "").strip():
+                raise ValueError(f"SWC entry {entry.get('swc_id')}: missing {field}")
+    return entries
+
+
+def load_snapshot() -> list[dict]:
+    entries = json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
+    return validate_entries(entries)
+
+
+def kb_version(entries: list[dict] | None = None) -> str:
+    """Stable id of the knowledge base actually used by a run."""
+    payload = json.dumps(
+        entries if entries is not None else load_snapshot(), sort_keys=True, ensure_ascii=False
+    ).encode("utf-8")
+    return "swc-" + hashlib.sha256(payload).hexdigest()[:8]
+
+
 def _fetch_swc_entries(github_token: str) -> list[dict]:
-    """Fetch SWC entries from GitHub API."""
+    """Fetch SWC entries from GitHub API (refresh path only)."""
     headers = {"Accept": "application/vnd.github.v3+json"}
     if github_token:
         headers["Authorization"] = f"token {github_token}"
@@ -101,33 +147,27 @@ def _parse_swc_markdown(raw_content: str, swc_id: str | None = None) -> dict:
 
 
 class SWCSyncEngine(BaseEngine):
-    def execute(self) -> dict:
+    def _fetch_and_parse(self) -> list[dict]:
         github_token = os.environ.get("GITHUB_TOKEN", "")
-
-        entries = _fetch_swc_entries(github_token)
-
         parsed_entries = []
-        for entry_meta in entries:
-            name = entry_meta["name"]
-            swc_id = name.replace(".md", "").upper()
-
+        for entry_meta in _fetch_swc_entries(github_token):
+            swc_id = entry_meta["name"].replace(".md", "").upper()
             file_headers = {"Accept": "application/vnd.github.v3.raw"}
             if github_token:
                 file_headers["Authorization"] = f"token {github_token}"
 
-            file_resp = httpx.get(
-                entry_meta["url"],
-                headers=file_headers,
-                timeout=30,
-            )
+            file_resp = httpx.get(entry_meta["url"], headers=file_headers, timeout=30)
             file_resp.raise_for_status()
-            raw_content = file_resp.text
-
-            parsed = _parse_swc_markdown(raw_content, swc_id)
+            parsed = _parse_swc_markdown(file_resp.text, swc_id)
             parsed["swc_id"] = swc_id
             parsed_entries.append(parsed)
+        return parsed_entries
 
+    def execute(self, refresh: bool = False) -> dict:
+        entries = validate_entries(self._fetch_and_parse()) if refresh else load_snapshot()
         return {
-            "entries_synced": len(parsed_entries),
-            "parsed_entries": parsed_entries,
+            "entries_synced": len(entries),
+            "parsed_entries": entries,
+            "source": "refresh" if refresh else "snapshot",
+            "kb_version": kb_version(entries),
         }
