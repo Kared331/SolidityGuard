@@ -9,7 +9,7 @@ from app.state.project_state import ProjectStatus
 
 if TYPE_CHECKING:  # 关系类型注解用；运行期由 models/__init__ 注册，避免循环导入
     from app.models.analysis import AnalysisResult
-    from app.models.audit import FuzzingResult, LLMAuditResult
+    from app.models.audit import AuditRun, FuzzingResult, LLMAuditResult
     from app.models.report import Report
 
 
@@ -29,6 +29,7 @@ class Project(Base):
     analyses: Mapped[list["AnalysisResult"]] = relationship(back_populates="project")
     fuzz_results: Mapped[list["FuzzingResult"]] = relationship(back_populates="project")
     llm_audit_results: Mapped[list["LLMAuditResult"]] = relationship(back_populates="project")
+    audit_runs: Mapped[list["AuditRun"]] = relationship(back_populates="project")
     reports: Mapped[list["Report"]] = relationship(back_populates="project")
 
 

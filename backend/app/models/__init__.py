@@ -1,5 +1,5 @@
 from app.models.analysis import AnalysisResult, Detection
-from app.models.audit import FuzzingResult, LLMAuditResult
+from app.models.audit import AuditRun, FuzzingResult, LLMAuditResult
 from app.models.feedback import FalsePositiveFeedback
 from app.models.knowledge import VulnerabilityEntry
 from app.models.project import Project, ProjectFile
@@ -11,6 +11,7 @@ __all__ = [
     "AnalysisResult",
     "Detection",
     "FuzzingResult",
+    "AuditRun",
     "LLMAuditResult",
     "FalsePositiveFeedback",
     "VulnerabilityEntry",

@@ -3,16 +3,66 @@
 import json
 import logging
 import os
+from collections import Counter
 from datetime import UTC, datetime
 
 from jinja2 import Environment, FileSystemLoader
 from sqlalchemy.orm import Session
 
 from app.llm.sync_wrapper import chat_completion
-from app.models import Detection, FalsePositiveFeedback, FuzzingResult, LLMAuditResult
+from app.models import AuditRun, Detection, FalsePositiveFeedback, FuzzingResult, LLMAuditResult
 from app.services.infra.storage import get_report_dir
 
 logger = logging.getLogger("solidguard.services.report_generator")
+
+
+def coverage_from_run(run: AuditRun | None) -> dict:
+    """Report-facing view of the ledger. Legacy projects (no run) stay visible."""
+    if run is None:
+        return {
+            "run_id": None,
+            "status": "legacy",
+            "degraded": False,
+            "files_total": 0,
+            "files_processed": 0,
+            "files_unreadable": 0,
+            "extracted": 0,
+            "audited": 0,
+            "skipped": 0,
+            "failed": 0,
+            "coverage": 0.0,
+            "skip_reasons": {},
+            "fail_reasons": {},
+            "invalid_findings": 0,
+            "agent": {},
+            "warnings": [],
+        }
+
+    units = (run.details_json or {}).get("units", [])
+    warnings = (run.details_json or {}).get("warnings", [])
+    extracted = run.functions_extracted
+    return {
+        "run_id": run.id,
+        "status": run.status,
+        "degraded": run.status == "degraded",
+        "files_total": run.files_total,
+        "files_processed": run.files_processed,
+        "files_unreadable": run.files_unreadable,
+        "extracted": extracted,
+        "audited": run.functions_audited,
+        "skipped": run.functions_skipped,
+        "failed": run.functions_failed,
+        "coverage": round(run.functions_audited / extracted, 4) if extracted else 0.0,
+        "skip_reasons": dict(Counter(u["reason"] for u in units if u["status"] == "skipped" and u.get("reason"))),
+        "fail_reasons": dict(Counter(u["reason"] for u in units if u["status"] == "failed" and u.get("reason"))),
+        "invalid_findings": run.invalid_findings,
+        "agent": {
+            "model": run.model,
+            "prompt_version": run.prompt_version,
+            "kb_version": run.kb_version,
+        },
+        "warnings": warnings,
+    }
 
 
 def aggregate_findings(project_id: int, session: Session) -> dict:
@@ -86,7 +136,13 @@ def aggregate_findings(project_id: int, session: Session) -> dict:
                     }
                 )
 
+    latest_run = session.query(AuditRun).filter(AuditRun.project_id == project_id).order_by(AuditRun.id.desc()).first()
+
     llm_results = session.query(LLMAuditResult).filter(LLMAuditResult.project_id == project_id).all()
+    if latest_run is not None:
+        # Only the newest run feeds the report; older runs must not double-count.
+        llm_results = [r for r in llm_results if r.audit_run_id == latest_run.id]
+
     llm_findings = []
     for lr in llm_results:
         llm_findings.append(
@@ -104,6 +160,7 @@ def aggregate_findings(project_id: int, session: Session) -> dict:
         "slither_findings": slither_findings,
         "fuzzing_findings": fuzzing_findings,
         "llm_findings": llm_findings,
+        "audit_coverage": coverage_from_run(latest_run),
     }
 
 
@@ -146,7 +203,7 @@ def polish_with_llm(findings: dict) -> dict:
     raw findings for that batch are preserved and other batches are
     unaffected.
     """
-    polished = {}
+    polished = {**findings}
 
     for key in _EXPECTED_KEYS:
         items = findings.get(key, [])
@@ -199,6 +256,7 @@ def generate_html(project_id: int, title: str, findings: dict) -> str:
         slither_findings=findings.get("slither_findings", []),
         fuzzing_findings=findings.get("fuzzing_findings", []),
         llm_findings=findings.get("llm_findings", []),
+        audit_coverage=findings.get("audit_coverage"),
     )
 
     report_dir = get_report_dir(project_id)
@@ -233,6 +291,25 @@ def generate_word(findings: dict, title: str, project_id: int) -> str:
     )
     doc.add_heading("Executive Summary", level=1)
     doc.add_paragraph(f"Total findings: {total}")
+
+    coverage = findings.get("audit_coverage")
+    if coverage:
+        doc.add_heading("Audit Coverage & Integrity", level=1)
+        if coverage["degraded"]:
+            doc.add_paragraph(
+                f"Degraded run: {coverage['skipped']} skipped, "
+                f"{coverage['failed']} failed, {coverage['files_unreadable']} unreadable file(s). "
+                "Findings do not cover every function."
+            )
+        if coverage["run_id"]:
+            doc.add_paragraph(
+                f"Files: {coverage['files_processed']}/{coverage['files_total']}  |  "
+                f"Functions extracted: {coverage['extracted']}  |  "
+                f"Audited: {coverage['audited']}  |  Skipped: {coverage['skipped']}  |  "
+                f"Failed: {coverage['failed']}  |  Coverage: {coverage['coverage'] * 100:.1f}%"
+            )
+        else:
+            doc.add_paragraph("No audit ledger for this project (legacy data); coverage is unknown.")
 
     sections = [
         (

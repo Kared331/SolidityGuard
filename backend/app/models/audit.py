@@ -23,11 +23,49 @@ class FuzzingResult(Base):
     project: Mapped["Project"] = relationship(back_populates="fuzz_results")
 
 
+class AuditRun(Base):
+    """One LLM audit execution: the ledger that makes coverage assertable.
+
+    Two identities must hold for every row:
+        files_total          == files_processed + files_unreadable
+        functions_extracted  == functions_audited + functions_skipped + functions_failed
+    """
+
+    __tablename__ = "audit_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[int] = mapped_column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(20), default="running", nullable=False)
+    model: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    prompt_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    kb_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    files_total: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    files_processed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    files_unreadable: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    functions_extracted: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    functions_audited: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    functions_skipped: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    functions_failed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    invalid_findings: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    rag_hits: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rag_failures: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    details_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    project: Mapped["Project"] = relationship(back_populates="audit_runs")
+
+
 class LLMAuditResult(Base):
     __tablename__ = "llm_audit_results"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     project_id: Mapped[int] = mapped_column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
+    audit_run_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("audit_runs.id"), nullable=True, index=True)
     contract_name: Mapped[str] = mapped_column(String(200), nullable=False)
     function_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     vulnerability_description: Mapped[str] = mapped_column(Text, nullable=False)

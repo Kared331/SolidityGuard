@@ -14,6 +14,7 @@ from app.config import settings
 from app.database import get_sync_session
 from app.models import (
     AnalysisResult,
+    AuditRun,
     Detection,
     FalsePositiveFeedback,
     FuzzingResult,
@@ -34,6 +35,30 @@ def _dir_age_days(path: str) -> float:
         return (time.time() - mtime) / 86400
     except OSError:
         return 0
+
+
+def _delete_project_rows(session, project_id: int) -> None:
+    """Delete a project's rows in FK-safe order.
+
+    Findings must go before their parents: detections -> analysis_results,
+    llm_audit_results -> audit_runs.
+    """
+    analysis_ids = [
+        r.id for r in session.query(AnalysisResult.id).filter(AnalysisResult.project_id == project_id).all()
+    ]
+    if analysis_ids:
+        session.query(Detection).filter(Detection.analysis_result_id.in_(analysis_ids)).delete(
+            synchronize_session="fetch"
+        )
+
+    session.query(AnalysisResult).filter(AnalysisResult.project_id == project_id).delete()
+    session.query(FuzzingResult).filter(FuzzingResult.project_id == project_id).delete()
+    session.query(LLMAuditResult).filter(LLMAuditResult.project_id == project_id).delete()
+    session.query(AuditRun).filter(AuditRun.project_id == project_id).delete()
+    session.query(Report).filter(Report.project_id == project_id).delete()
+    session.query(FalsePositiveFeedback).filter(FalsePositiveFeedback.project_id == project_id).delete()
+    session.query(ProjectFile).filter(ProjectFile.project_id == project_id).delete()
+    session.query(Project).filter(Project.id == project_id).delete()
 
 
 @celery.task(name="app.tasks.cleanup.cleanup_old_files", bind=True)
@@ -63,31 +88,7 @@ def cleanup_old_files(self):
 
                     try:
                         with get_sync_session() as session:
-                            # Delete in correct order to respect FK constraints
-                            # 1. Delete detections (FK → analysis_results)
-                            analysis_ids = [
-                                r.id
-                                for r in session.query(AnalysisResult.id)
-                                .filter(AnalysisResult.project_id == project_id)
-                                .all()
-                            ]
-                            if analysis_ids:
-                                session.query(Detection).filter(Detection.analysis_result_id.in_(analysis_ids)).delete(
-                                    synchronize_session="fetch"
-                                )
-
-                            # 2. Delete analysis results, fuzz results, llm audit results, reports, FP
-                            session.query(AnalysisResult).filter(AnalysisResult.project_id == project_id).delete()
-                            session.query(FuzzingResult).filter(FuzzingResult.project_id == project_id).delete()
-                            session.query(LLMAuditResult).filter(LLMAuditResult.project_id == project_id).delete()
-                            session.query(Report).filter(Report.project_id == project_id).delete()
-                            session.query(FalsePositiveFeedback).filter(
-                                FalsePositiveFeedback.project_id == project_id
-                            ).delete()
-
-                            # 3. Delete project files and project
-                            session.query(ProjectFile).filter(ProjectFile.project_id == project_id).delete()
-                            session.query(Project).filter(Project.id == project_id).delete()
+                            _delete_project_rows(session, project_id)
                             session.commit()
                     except Exception as e:
                         logger.exception("Failed to clean DB records for project %d: %s", project_id, e)

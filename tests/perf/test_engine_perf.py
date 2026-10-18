@@ -26,8 +26,12 @@ pytestmark = pytest.mark.perf
 
 # ── 合约 fixture 生成器 ──────────────────────────────────────────
 
-def _make_contract(num_functions: int = 2) -> str:
-    """生成含 N 个关键函数的合成 Solidity 合约（每个含 transfer 关键词以被 _extract_key_functions 选中）。"""
+def _make_contract(num_functions: int = 2, include_constructor: bool = True) -> str:
+    """生成含 N 个 transfer 函数的合成合约（关键词确保被选中）。
+
+    include_constructor=False 时不生成 ctor：D3 起 constructor 也算一个审计单元，
+    需要精确计数的场景用它保持单元数 == num_functions。
+    """
     funcs = []
     for i in range(num_functions):
         funcs.append(f"""
@@ -37,14 +41,14 @@ def _make_contract(num_functions: int = 2) -> str:
         balances[_to] += _value;
         return true;
     }}""")
+    ctor = "    constructor() {}\n" if include_constructor else ""
     return f"""// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 contract PerfToken {{
     mapping(address => uint256) public balances;
 
-    constructor() {{}}
-{chr(10).join(funcs)}
+{ctor}{chr(10).join(funcs)}
 }}
 """
 
@@ -160,7 +164,8 @@ def test_perf_A_single_file_instant_mock(single_contract_file, capsys):
         print(f"  耗时: {_fmt_ms(elapsed)} | 函数: {funcs} | 吞吐: {funcs_per_sec:.1f} 函数/秒")
         print(f"  说明: 纯逻辑开销（regex 提取 + JSON 解析 + 批量化逻辑）")
 
-    assert funcs == 2
+    # 2 transfer + 1 constructor（D3 起 ctor 也是审计单元）
+    assert funcs == 3
     assert elapsed < 1.0, f"纯逻辑开销应 <1s，实际 {elapsed:.3f}s"
 
 
@@ -249,7 +254,8 @@ def test_perf_C_single_file_50ms_llm_delay(single_contract_file, capsys):
         print(f"  耗时: {_fmt_ms(elapsed)} | 理论: {_fmt_ms(theoretical)} | 函数: {funcs} | 吞吐: {funcs_per_sec:.1f} 函数/秒")
         print(f"  说明: 单线程串行 LLM 是真实瓶颈；理论 {(1+funcs)*50}ms = summary + N×audit")
 
-    assert funcs == 2
+    # 2 transfer + 1 constructor（D3 起 ctor 也是审计单元）
+    assert funcs == 3
     assert elapsed >= 0.10, "50ms×3 次调用应 ≥ 150ms"
 
 
@@ -353,11 +359,11 @@ def test_perf_E_embedding_batch_vs_single(single_contract_file, capsys):
 # ── 场景 F：小 N 串行守护（P4-3 阈值生效验证）─────────────────
 
 def test_perf_F_small_n_serial_path(capsys):
-    """场景 F：单文件 5 函数（≤ 阈值）+ LLM 50ms 延迟 —— 验证 P4-3 阈值生效。
+    """场景 F：单文件 4 函数 + 1 constructor = 5 单元（= 阈值）+ LLM 50ms 延迟 —— 验证 P4-3 阈值生效。
 
     P4-3 阈值=5：N ≤ 5 时走串行路径（避免 ThreadPool 开销）。
-    5 函数串行耗时 = summary(50ms) + 5×audit(50ms) = 300ms。
-    若误启用并行，耗时 ≈ 50ms + 1×50ms = 100ms（5 函数一批并行）。
+    5 单元串行耗时 = summary(50ms) + 5×audit(50ms) = 300ms。
+    若误启用并行，耗时 ≈ 50ms + 1×50ms = 100ms（5 单元一批并行）。
     本测试守护串行路径：耗时 ≥ 250ms 即认为走串行。
     """
     from app.services.engine.llm_audit import LLMAuditEngine
@@ -370,7 +376,7 @@ def test_perf_F_small_n_serial_path(capsys):
     contract = tempfile.NamedTemporaryFile(
         mode="w", suffix=".sol", delete=False, encoding="utf-8",
     )
-    contract.write(_make_contract(5))
+    contract.write(_make_contract(4))
     contract.close()
 
     engine = LLMAuditEngine()
@@ -419,7 +425,7 @@ def test_perf_G_function_level_parallel_optimization(capsys):
     big_contract = tempfile.NamedTemporaryFile(
         mode="w", suffix=".sol", delete=False, encoding="utf-8",
     )
-    big_contract.write(_make_contract(10))
+    big_contract.write(_make_contract(10, include_constructor=False))
     big_contract.close()
 
     engine = LLMAuditEngine()

@@ -26,6 +26,7 @@
         .severity-informational { background-color: #6c757d; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: 600; font-size: 11px; text-transform: uppercase; }
         .severity-unknown { background-color: #6c757d; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: 600; font-size: 11px; text-transform: uppercase; }
         .no-data { color: #999; font-style: italic; text-align: center; padding: 20px; }
+        .warning-banner { background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px 15px; margin: 10px 0; color: #856404; font-size: 13px; }
         .footer { margin-top: 40px; padding-top: 15px; border-top: 1px solid #e0e0e0; text-align: center; color: #999; font-size: 12px; }
     </style>
 </head>
@@ -45,6 +46,35 @@
                  LLM: {{ llm_findings|length }})
             </p>
         </div>
+
+        {% if audit_coverage %}
+        <div class="section">
+            <h2>Audit Coverage &amp; Integrity</h2>
+            {% if audit_coverage.degraded %}
+            <p class="warning-banner">
+                Degraded run: {{ audit_coverage.skipped }} skipped,
+                {{ audit_coverage.failed }} failed,
+                {{ audit_coverage.files_unreadable }} unreadable file(s).
+                Findings below do not cover every function.
+            </p>
+            {% endif %}
+            {% if audit_coverage.run_id %}
+            <table class="findings-table">
+                <tbody>
+                    <tr><th>Files processed</th><td>{{ audit_coverage.files_processed }} / {{ audit_coverage.files_total }}</td></tr>
+                    <tr><th>Functions extracted</th><td>{{ audit_coverage.extracted }}</td></tr>
+                    <tr><th>Audited</th><td>{{ audit_coverage.audited }}</td></tr>
+                    <tr><th>Skipped</th><td>{{ audit_coverage.skipped }}{% if audit_coverage.skip_reasons %}: {% for reason, count in audit_coverage.skip_reasons.items() %}{{ reason }}={{ count }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</td></tr>
+                    <tr><th>Failed</th><td>{{ audit_coverage.failed }}{% if audit_coverage.fail_reasons %}: {% for reason, count in audit_coverage.fail_reasons.items() %}{{ reason }}={{ count }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</td></tr>
+                    <tr><th>Coverage</th><td>{{ "%.1f"|format(audit_coverage.coverage * 100) }}%</td></tr>
+                    <tr><th>Model / prompt</th><td>{{ audit_coverage.agent.model or "-" }} / {{ audit_coverage.agent.prompt_version or "-" }}</td></tr>
+                </tbody>
+            </table>
+            {% else %}
+            <p>No audit ledger for this project (legacy data); coverage is unknown.</p>
+            {% endif %}
+        </div>
+        {% endif %}
 
         <div class="section">
             <h2>Slither Static Analysis Findings</h2>
