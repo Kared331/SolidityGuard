@@ -389,3 +389,9 @@ SolidGuard 项目更新说明。
 
 - 仓库地址：[Kared331/SolidityGuard](https://github.com/Kared331/SolidityGuard)
 
+### 2026-10-18 · 首次真实 LLM 运行（DeepSeek）
+
+- **发现 100% 假阴性**：schema 要求 `impact`/`confidence` 必填，prompt 未要求 → 10/10 finding 被丢弃，报告显示 "completed, 0 findings"；账本的 `invalid_findings=10` 是唯一信号。
+- **修复**：可选字段 + prompt 对齐 + 回归测试。
+- **结果**：同一合约产出 9 条 finding，其中 `withdraw` 的 SWC-107 重入被 Critical 命中。
+- **记录**：`docs/evidence/first-real-llm-run.md`。
