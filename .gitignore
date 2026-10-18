@@ -94,3 +94,6 @@ backend/out/
 
 # ─── Fetched measurement corpus (P5, third-party sources) ───────
 corpus/
+
+# ─── Scratch (benchmark tarballs, temp scripts) ─────────────────
+.tmp/
