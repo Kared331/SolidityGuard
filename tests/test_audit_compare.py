@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.services.audit_service import compare_audit_runs
+from app.services.audit_service import compare_audit_runs, get_audit_run
 
 
 def _row(run_id, function, severity="High"):
@@ -54,6 +54,43 @@ async def test_compare_classifies_added_removed_persisted():
     assert out["removed"][0]["function"] == "transfer"
     assert out["persisted"][0]["function"] == "withdraw"
     assert out["base"]["run_id"] == 1 and out["head"]["run_id"] == 2
+
+
+@pytest.mark.asyncio
+async def test_run_detail_exposes_incremental_plan():
+    run = MagicMock()
+    run.id = 15
+    run.status = "completed"
+    run.files_total = 2
+    run.functions_extracted = 8
+    run.functions_audited = 1
+    run.functions_skipped = 0
+    run.functions_failed = 0
+    run.functions_filtered = 0
+    run.functions_unchanged = 7
+    run.model = "deepseek-chat"
+    run.prompt_version = "p"
+    run.kb_version = "k"
+    run.started_at = run.finished_at = None
+    run.details_json = {
+        "mode": "incremental",
+        "incremental": {"files": [{"file": "A.sol", "changed": ["withdraw"]}], "missing": [], "changed_total": 1, "unchanged_total": 7},
+        "units": [{"function": "withdraw", "status": "audited"}],
+    }
+
+    db = AsyncMock()
+    db.get.return_value = run
+    scalar = MagicMock()
+    scalar.scalar.return_value = 3
+    db.execute.return_value = scalar
+
+    out = await get_audit_run(db, 15)
+
+    assert out["mode"] == "incremental"
+    assert out["functions_unchanged"] == 7
+    assert out["findings"] == 3
+    assert out["incremental"]["changed_total"] == 1
+    assert out["units"][0]["function"] == "withdraw"
 
 
 @pytest.mark.asyncio

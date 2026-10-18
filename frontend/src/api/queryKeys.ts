@@ -22,6 +22,12 @@ export const queryKeys = {
     all: ['reports'] as const,
     byProject: (projectId: string) => ['reports', 'byProject', projectId] as const,
   },
+  runs: {
+    all: ['runs'] as const,
+    byProject: (projectId: string) => ['runs', 'byProject', projectId] as const,
+    detail: (runId: string) => ['runs', 'detail', runId] as const,
+    compare: (baseId: string, headId: string) => ['runs', 'compare', baseId, headId] as const,
+  },
   vulnerabilities: {
     all: ['vulnerabilities'] as const,
     search: (query: string) => ['vulnerabilities', 'search', query] as const,

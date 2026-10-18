@@ -53,6 +53,69 @@ export interface AuditTriggerResponse {
   task_id: string;
 }
 
+// Audit run (one LLM audit execution; full or incremental)
+export interface AuditRunSummary {
+  id: number;
+  status: string;
+  mode: string;
+  files_total: number;
+  functions_extracted: number;
+  functions_audited: number;
+  functions_skipped: number;
+  functions_failed: number;
+  functions_filtered: number;
+  functions_unchanged: number;
+  findings: number;
+  model?: string | null;
+  prompt_version?: string | null;
+  kb_version?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
+}
+
+export interface IncrementalPlanFile {
+  file: string;
+  changed: string[];
+  unchanged: string[];
+  whole_file: boolean;
+  hunks: number;
+}
+
+export interface AuditUnit {
+  file: string;
+  function: string;
+  line: number;
+  status: string;
+  reason: string | null;
+  findings: number;
+  rag_hits: number;
+}
+
+export interface AuditRunDetail extends AuditRunSummary {
+  incremental?: {
+    files: IncrementalPlanFile[];
+    missing: string[];
+    changed_total: number;
+    unchanged_total: number;
+  } | null;
+  units: AuditUnit[];
+}
+
+export interface CompareFinding {
+  contract: string;
+  function: string;
+  severity: string;
+}
+
+export interface CompareResult {
+  base: { run_id: number; status: string; functions_audited: number; findings: number };
+  head: { run_id: number; status: string; functions_audited: number; findings: number };
+  added: CompareFinding[];
+  removed: CompareFinding[];
+  persisted: CompareFinding[];
+  counts: { added: number; removed: number; persisted: number };
+}
+
 // Vulnerability from SWC knowledge base
 export interface VulnerabilityEntry {
   id: number;

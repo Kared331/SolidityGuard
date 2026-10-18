@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AuditRun, LLMAuditResult, Project
@@ -93,6 +93,75 @@ async def compare_audit_runs(db: AsyncSession, base_run_id: int, head_run_id: in
             "persisted": len(base_keys & head_keys),
         },
     }
+
+
+def _run_mode(run: AuditRun) -> str:
+    return (run.details_json or {}).get("mode") or "full"
+
+
+def _run_summary(run: AuditRun, findings: int) -> dict:
+    return {
+        "id": run.id,
+        "status": run.status,
+        "mode": _run_mode(run),
+        "files_total": run.files_total,
+        "functions_extracted": run.functions_extracted,
+        "functions_audited": run.functions_audited,
+        "functions_skipped": run.functions_skipped,
+        "functions_failed": run.functions_failed,
+        "functions_filtered": run.functions_filtered,
+        "functions_unchanged": run.functions_unchanged,
+        "findings": findings,
+        "model": run.model,
+        "prompt_version": run.prompt_version,
+        "kb_version": run.kb_version,
+        "started_at": run.started_at,
+        "finished_at": run.finished_at,
+    }
+
+
+async def list_audit_runs(db: AsyncSession, project_id: int) -> list[dict]:
+    project = await db.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    runs = (
+        (
+            await db.execute(
+                select(AuditRun)
+                .where(AuditRun.project_id == project_id)
+                .order_by(AuditRun.id.desc())
+                .limit(50)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    counts = dict(
+        (
+            await db.execute(
+                select(LLMAuditResult.audit_run_id, func.count())
+                .where(LLMAuditResult.project_id == project_id)
+                .group_by(LLMAuditResult.audit_run_id)
+            )
+        ).all()
+    )
+    return [_run_summary(run, counts.get(run.id, 0)) for run in runs]
+
+
+async def get_audit_run(db: AsyncSession, run_id: int) -> dict:
+    run = await db.get(AuditRun, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Audit run not found")
+    findings = (
+        await db.execute(
+            select(func.count()).select_from(LLMAuditResult).where(LLMAuditResult.audit_run_id == run_id)
+        )
+    ).scalar() or 0
+    detail = _run_summary(run, findings)
+    detail["incremental"] = (run.details_json or {}).get("incremental")
+    detail["units"] = (run.details_json or {}).get("units", [])
+    return detail
 
 
 async def list_llm_audit_results(db: AsyncSession, project_id: int) -> list[LLMAuditResult]:

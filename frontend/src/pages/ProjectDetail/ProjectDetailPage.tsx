@@ -15,6 +15,7 @@ import FilesPanel from './FilesPanel';
 import AnalysisTab from './AnalysisTab';
 import FuzzingTab from './FuzzingTab';
 import LLMAuditTab from './LLMAuditTab';
+import RunsTab from './RunsTab';
 import FindingDetailDrawer from './FindingDetailDrawer';
 import styles from './ProjectDetailPage.module.css';
 
@@ -86,6 +87,11 @@ export default function ProjectDetailPage() {
   const allDetections = analyses;
 
   const tabItems: TabItem[] = [
+    {
+      key: 'runs',
+      label: '审计运行',
+      content: <RunsTab projectId={projectId} />,
+    },
     {
       key: 'slither',
       label: allDetections.length > 0

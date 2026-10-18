@@ -424,3 +424,8 @@ SolidGuard 项目更新说明。
 - **实测**（项目 #68）：8 函数 → 审 1 / 未变 7；对比 added=1 removed=19 persisted=2；报告含 Unchanged 行。
 - **CI**：新增 `.github/workflows/solidguard-incremental.yml.example`（接口已验证，未在真实 runner 跑过）。
 - **测试**：179 单测（+2）。
+### 2026-10-18 · 增量审计 UI（审计运行 tab）
+
+- **新增** `GET /api/v1/projects/{id}/runs` 与 `GET /api/v1/runs/{id}`（覆盖率分项 + 增量计划 + 逐函数账本）。
+- **前端**：ProjectDetail 新增「审计运行」tab——运行列表、五段覆盖率条、增量计划（changed/unchanged）、逐函数账本、粘贴 diff 触发、两次运行对比 Drawer。
+- **测试**：180 单测（+1）；`npm run build` 通过。
