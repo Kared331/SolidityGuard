@@ -416,3 +416,11 @@ SolidGuard 项目更新说明。
 - **基线**：160 个合成单函数改动，选择 160/160 正确，平均审计量减少 91.5%。
 - **局限**：合成 diff、单函数改动；"少审"风险（改动 A 破坏 B）当前无法发现。
 - **测试**：175 单测（+9）。
+### 2026-10-18 · 增量审计全链路（选题 A）
+
+- **新增** `POST /projects/{id}/incremental-audit`（接收 unified diff）与 `GET /runs/{a}/compare/{b}`。
+- **增量调度**：diff → 函数级映射 → 只审变更函数；未触及函数记为 `unchanged/not_in_diff`，不调用模型。
+- **账本**：新增 `functions_unchanged`（迁移 015），恒等式扩为五项；分母仍是真实函数数。
+- **实测**（项目 #68）：8 函数 → 审 1 / 未变 7；对比 added=1 removed=19 persisted=2；报告含 Unchanged 行。
+- **CI**：新增 `.github/workflows/solidguard-incremental.yml.example`（接口已验证，未在真实 runner 跑过）。
+- **测试**：179 单测（+2）。

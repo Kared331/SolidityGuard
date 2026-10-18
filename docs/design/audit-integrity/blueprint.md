@@ -338,10 +338,14 @@ U:  functions_extracted = audited + skipped + failed + filtered   （仅统计 p
 |---|---|
 | 1. git diff 解析 | ✅ `services/incremental/diff_parser.py` |
 | 2. 函数级变更映射 | ✅ `services/incremental/mapper.py` |
-| 3. 增量调度（复用优先级与预算） | ⬜ 未接线 |
-| 4. 变更影响面提示 | ⬜ 仅同文件上下文 |
-| 5. CI 触发（Action / Webhook） | ⬜ 未做 |
-| 6. 两次审计报告对比 | ⬜ 未做 |
+| 3. 增量调度（复用优先级与预算） | ✅ `POST /incremental-audit` → `run_incremental_audit` |
+| 4. 变更影响面提示 | ✅ `details_json.incremental` + 报告 Unchanged 行（仅同文件上下文） |
+| 5. CI 触发（Action / Webhook） | ✅ `.github/workflows/solidguard-incremental.yml.example`（接口已验证，未在真实 runner 跑过） |
+| 6. 两次审计报告对比 | ✅ `GET /runs/{base}/compare/{head}` |
+
+**端到端实测**（[`evidence/incremental-pipeline.md`](../../evidence/incremental-pipeline.md)）：项目 #68，全量 8 函数 → 增量 1 审 7 未变，对比 `added=1 / removed=19 / persisted=2`，报告含 Unchanged 行。
+
+**口径修正**：增量运行曾只把 diff 涉及的文件计入账本（分母 4），已改为"所有文件入账、未触及记为 `unchanged`、不调用模型"。
 
 **基线**（[`evidence/incremental-baseline.md`](../../evidence/incremental-baseline.md)）：160 个合成单函数改动，选择准确率 160/160，平均审计量减少 91.5%。
 

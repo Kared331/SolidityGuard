@@ -1,0 +1,45 @@
+# SolidiGuard incremental audit — CI template.
+#
+# Copy to `.github/workflows/solidguard-incremental.yml` and set repository
+# secrets: SOLIDGUARD_URL, SOLIDGUARD_API_KEY, SOLIDGUARD_PROJECT_ID.
+# The project must already exist: upload the repository zip once via
+# POST /api/v1/projects, then reuse its id.
+#
+# The service must be reachable from the runner. For a self-hosted demo use a
+# self-hosted runner; GitHub-hosted runners cannot reach localhost.
+
+name: SolidiGuard incremental audit
+
+on:
+  pull_request:
+    paths:
+      - "**/*.sol"
+
+jobs:
+  incremental-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build unified diff (Solidity only)
+        run: |
+          git diff --no-color "origin/${{ github.base_ref }}...HEAD" -- '*.sol' > solidguard-diff.patch
+          wc -c solidguard-diff.patch
+
+      - name: Send diff to SolidiGuard
+        env:
+          SOLIDGUARD_URL: ${{ secrets.SOLIDGUARD_URL }}
+          SOLIDGUARD_API_KEY: ${{ secrets.SOLIDGUARD_API_KEY }}
+          SOLIDGUARD_PROJECT_ID: ${{ secrets.SOLIDGUARD_PROJECT_ID }}
+        run: |
+          if [ ! -s solidguard-diff.patch ]; then
+            echo "no Solidity changes"; exit 0
+          fi
+          jq -Rs '{diff: .}' solidguard-diff.patch > payload.json
+          curl -fsS -X POST \
+            "$SOLIDGUARD_URL/api/v1/projects/$SOLIDGUARD_PROJECT_ID/incremental-audit" \
+            -H "X-API-Key: $SOLIDGUARD_API_KEY" \
+            -H "Content-Type: application/json" \
+            --data @payload.json
