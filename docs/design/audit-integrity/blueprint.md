@@ -330,6 +330,25 @@ U:  functions_extracted = audited + skipped + failed + filtered   （仅统计 p
 
 ---
 
+### P7 — 毕设功能：增量审计（进行中）
+
+**定位**：选题已定为《面向持续集成的智能合约增量审计系统设计与实现》。它不是研究命题，是 P0–P6 基础上的功能扩展，服务于毕设的"工作量"与"演示"。
+
+| 功能 | 状态 |
+|---|---|
+| 1. git diff 解析 | ✅ `services/incremental/diff_parser.py` |
+| 2. 函数级变更映射 | ✅ `services/incremental/mapper.py` |
+| 3. 增量调度（复用优先级与预算） | ⬜ 未接线 |
+| 4. 变更影响面提示 | ⬜ 仅同文件上下文 |
+| 5. CI 触发（Action / Webhook） | ⬜ 未做 |
+| 6. 两次审计报告对比 | ⬜ 未做 |
+
+**基线**（[`evidence/incremental-baseline.md`](../../evidence/incremental-baseline.md)）：160 个合成单函数改动，选择准确率 160/160，平均审计量减少 91.5%。
+
+**必须写进论文的局限**：增量审计最大的风险是**少审**（改动 A 破坏 B，B 未被选中），当前实现无法发现。基准里 91.5% 的节省只在"单函数改动"下成立。
+
+---
+
 ## 4. 依赖与排期
 
 | 阶段 | 依赖 | 工期 | 关键路径 |
