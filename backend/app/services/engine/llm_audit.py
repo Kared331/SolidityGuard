@@ -300,8 +300,9 @@ class LLMAuditEngine:
                     f"Identify vulnerabilities, severity, suggested fixes, "
                     f"and gas optimizations for this function.\n"
                     f'Return a JSON array of objects: [{{"vulnerability_description": "...", '
-                    f'"severity": "...", "suggested_fix": "...", '
-                    f'"gas_optimization": "..."}}]'
+                    f'"severity": "Critical|High|Medium|Low|Informational", '
+                    f'"impact": "...", "suggested_fix": "...", '
+                    f'"gas_optimization": "...", "confidence": 0.0}}]'
                 ),
             },
         ]

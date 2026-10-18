@@ -374,6 +374,28 @@ def test_engine_records_keyword_filtered_units(monkeypatch, tmp_path):
     assert len(result["units"]) == 3
 
 
+def test_finding_without_optional_fields_is_accepted(monkeypatch):
+    """Regression: the first real-model run rejected 10/10 findings.
+
+    The prompt never asked for `impact`/`confidence`, but the schema demanded
+    them, so every finding was dropped and the run still reported success.
+    """
+    mod = _patch_llm(
+        monkeypatch,
+        lambda messages: (
+            '[{"vulnerability_description": "reentrancy", "severity": "high"}]',
+            {"total_tokens": 5},
+        ),
+    )
+    monkeypatch.setattr(mod.token_budget, "check_budget", lambda pid: (True, ""))
+
+    result = mod.LLMAuditEngine().execute_single_file(1, 1, str(_fixture_path()))
+
+    assert result["invalid_findings"] == 0
+    assert len(result["findings"]) == 4
+    assert result["findings"][0]["severity"] == "High"
+
+
 # ─── severity 归一 ───────────────────────────────────────────────
 
 

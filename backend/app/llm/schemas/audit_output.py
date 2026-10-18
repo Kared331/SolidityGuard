@@ -9,16 +9,22 @@ from pydantic import BaseModel, Field
 
 
 class AuditFindingSchema(BaseModel):
-    """Schema for a single audit finding from LLM output."""
+    """Schema for a single audit finding from LLM output.
 
-    vulnerability_description: str = Field(..., description="Detailed explanation of the vulnerability")
+    Only the fields the pipeline actually consumes are required. `impact` and
+    `confidence` are optional because the audit prompt does not require them
+    and models legitimately omit them; demanding them silently discarded every
+    finding on the first real-model run (10/10 rejected, 0 findings reported).
+    """
+
+    vulnerability_description: str = Field(..., min_length=1, description="Detailed explanation of the vulnerability")
     severity: Literal["Critical", "High", "Medium", "Low", "Informational"] = Field(
         ..., description="Vulnerability severity level"
     )
-    impact: str = Field(..., description="Concrete description of what an attacker could achieve")
-    suggested_fix: str = Field(..., description="Specific code changes to fix the vulnerability")
+    impact: str = Field("", description="Concrete description of what an attacker could achieve")
+    suggested_fix: str = Field("", description="Specific code changes to fix the vulnerability")
     gas_optimization: str | None = Field(None, description="Optional gas optimization suggestion")
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score 0.0-1.0")
+    confidence: float | None = Field(None, ge=0.0, le=1.0, description="Confidence score 0.0-1.0")
 
 
 class ContractSummarySchema(BaseModel):

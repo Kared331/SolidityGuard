@@ -30,15 +30,15 @@
   "providers": {
     "default": {
       "apiKey": "${LLM_API_KEY}",
-      "baseUrl": "https://api.openai.com/v1",
+      "baseUrl": "https://api.deepseek.com",
       "api": "openai",
-      "defaultModel": "gpt-4o",
+      "defaultModel": "deepseek-chat",
       "models": [
         {
-          "id": "gpt-4o",
-          "name": "GPT-4o",
+          "id": "deepseek-chat",
+          "name": "DeepSeek Chat",
           "maxTokens": 4096,
-          "contextWindow": 128000
+          "contextWindow": 65536
         }
       ]
     },
