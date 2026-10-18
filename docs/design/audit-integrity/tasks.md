@@ -80,7 +80,7 @@
 | 4 | 响应不可解析 | failed，reason=parse_error |
 | 5 | RAG 全失败 | audited 不变，`rag_failures = extracted`，`degraded` |
 | 6 | 文件读不了 | `files_unreadable=1`，extracted=0 |
-| 7 | 恒等式 | 任意构造结果下 F 与 U 同时成立 |
+| 7 | 恒等式 | 任意构造结果下 F 与 U 同时成立（U 在 P5 扩为四项，含 `filtered`） |
 | 8 | 最新 run | 两次审计后报告只含最新 findings |
 | 9 | 旧数据 | `audit_run_id` 全 NULL 时报告仍含历史 findings |
 | 10 | 报告渲染 | 覆盖率数字与账本一致；degraded 有横幅 |

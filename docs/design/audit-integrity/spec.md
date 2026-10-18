@@ -70,7 +70,7 @@ unit_key = f"{relative_file_path}#{function_name}@{line_start}"
 一次 LLM 审计任务 = 一条 `audit_run` + N 条单元记录。账本必须满足：
 
 ```
-functions_extracted == functions_audited + functions_skipped + functions_failed
+functions_extracted == functions_audited + functions_skipped + functions_failed + functions_filtered
 ```
 
 这条恒等式是整个方案的锚点。任何破坏它的代码路径都是 bug。
@@ -139,6 +139,7 @@ def extract_functions(source: str) -> list[FunctionUnit]: ...
 | `functions_audited` | int | 分子 |
 | `functions_skipped` | int | |
 | `functions_failed` | int | |
+| `functions_filtered` | int | 被关键词过滤、未送审的函数数（P5 加入：不入账则分母缩水） |
 | `invalid_findings` | int | severity 非法被丢弃的条目数 |
 | `rag_hits` | int | 检索命中条数 > 0 的函数数 |
 | `rag_failures` | int | 检索抛异常的函数数 |
@@ -250,7 +251,7 @@ finding → audit_run_id → (model, prompt_version, kb_version)
 
 ### 6.1 I1 覆盖守恒
 
-**命题**：对任意输入，提取结果等于解析真值，且 `audited + skipped + failed == extracted`。
+**命题**：对任意输入，提取结果等于解析真值，且 `audited + skipped + failed + filtered == extracted`。
 
 | 用例 | 断言 | 对应缺陷 |
 |---|---|---|
@@ -261,6 +262,7 @@ finding → audit_run_id → (model, prompt_version, kb_version)
 | 真实 fixture `VulnerableToken.sol` | 单元集合 == {constructor, transfer, withdraw, getBalance} | D3 |
 | 无关键词函数（如 `helper()`） | 仍在送审集合内 | D1 |
 | 预算耗尽 | `audited + skipped == extracted`，skipped.reason == budget | — |
+| 关键词过滤 | 被过滤函数 `status=filtered, reason=keyword_filter`，且计入 `extracted` | D1 |
 
 ### 6.2 I2 降级可见
 

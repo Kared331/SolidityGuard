@@ -1,0 +1,745 @@
+[
+  {
+    "name": "uniswap-v2-core",
+    "repo": "Uniswap/v2-core",
+    "sha": "6a9e7c97860676e0992f22a49665760444c1cdf5",
+    "files": [
+      {
+        "path": "contracts/UniswapV2ERC20.sol",
+        "sha256": "b8ce88929ce2c93b8fce385f8d57701b1a64c600a95317ea5f3561d36297be32"
+      },
+      {
+        "path": "contracts/UniswapV2Factory.sol",
+        "sha256": "e0cef3e874a68cbcc5986451b1fec180ba5ff5699f27a256b7c10fafefe36b99"
+      },
+      {
+        "path": "contracts/UniswapV2Pair.sol",
+        "sha256": "43a5421b31415868367b62bfa161ca10bcee03778873faad905f5a3e2cce9cbd"
+      },
+      {
+        "path": "contracts/interfaces/IERC20.sol",
+        "sha256": "2b63f199f838028184efefbcfd6cf2b9192624c3dae5dc1116ecbb15c36a67e8"
+      },
+      {
+        "path": "contracts/interfaces/IUniswapV2Callee.sol",
+        "sha256": "ecfa434d468bb1888124d8c34b0b8483f4ea1e5cd63f0874c8b28aa4305c1dbc"
+      },
+      {
+        "path": "contracts/interfaces/IUniswapV2ERC20.sol",
+        "sha256": "7948069aea398dec4b7e771ffc749a24fdce3a64673a1b14deae960e7a54c603"
+      },
+      {
+        "path": "contracts/interfaces/IUniswapV2Factory.sol",
+        "sha256": "51d056199e3f5e41cb1a9f11ce581aa3e190cc982db5771ffeef8d8d1f962a0d"
+      },
+      {
+        "path": "contracts/interfaces/IUniswapV2Pair.sol",
+        "sha256": "29c75e69ce173ff8b498584700fef76bc81498c1d98120e2877a1439f0c31b5a"
+      },
+      {
+        "path": "contracts/libraries/Math.sol",
+        "sha256": "e4a9d451964a0689be2b244322a353de143ca4248d8736d91aca4ffadca4325f"
+      },
+      {
+        "path": "contracts/libraries/SafeMath.sol",
+        "sha256": "4b1c95ff75de7342e0fadff58064820a4eb7c2fcb422a75b4994980ce8e216ae"
+      },
+      {
+        "path": "contracts/libraries/UQ112x112.sol",
+        "sha256": "6633b57b0723b1d72e08cc3e8b29f0af838294e59863b6cdcce95a141ed02cdb"
+      },
+      {
+        "path": "contracts/test/ERC20.sol",
+        "sha256": "e11b370820584a64b1ef5b498a348349f311787ba77b3b0a632abc1110dcc7e2"
+      }
+    ]
+  },
+  {
+    "name": "uniswap-v2-periphery",
+    "repo": "Uniswap/v2-periphery",
+    "sha": "ed24991304291297c3b4a52818d02f46a17aa9a2",
+    "files": [
+      {
+        "path": "contracts/UniswapV2Migrator.sol",
+        "sha256": "b1bf0327cec8556c602174e20f067782c71c051ddb6f45f00459a062402ca374"
+      },
+      {
+        "path": "contracts/UniswapV2Router01.sol",
+        "sha256": "da25cb106f822d04eb126249b2a08f986dd579920f790560ef56ca9ed8879786"
+      },
+      {
+        "path": "contracts/UniswapV2Router02.sol",
+        "sha256": "acabe6d6c9c275aa5c27d8ed59b3d23d21616523071043e89eea7bca474babb8"
+      },
+      {
+        "path": "contracts/examples/ExampleComputeLiquidityValue.sol",
+        "sha256": "71e03fb7e90770f9b1b625f18f814ceb2ca5e9ac2094cffe265d98200a0997ef"
+      },
+      {
+        "path": "contracts/examples/ExampleFlashSwap.sol",
+        "sha256": "845643504669ff07f365c3465fefaf23d591733f127e46bd6c6174eebdc3f7d9"
+      },
+      {
+        "path": "contracts/examples/ExampleOracleSimple.sol",
+        "sha256": "ac597bb691036258e9416f8a8b292e318b80e3b7628e5e0de9222848038fd518"
+      },
+      {
+        "path": "contracts/examples/ExampleSlidingWindowOracle.sol",
+        "sha256": "a84405c81d1fbd772abd51d51839154c3a640bee730347f484fae8139edad500"
+      },
+      {
+        "path": "contracts/examples/ExampleSwapToPrice.sol",
+        "sha256": "64f6e16c11e2456cd3c39da3d9b8562de4aa77eacedcc18aafe7924b872f12c4"
+      },
+      {
+        "path": "contracts/interfaces/IERC20.sol",
+        "sha256": "2b63f199f838028184efefbcfd6cf2b9192624c3dae5dc1116ecbb15c36a67e8"
+      },
+      {
+        "path": "contracts/interfaces/IUniswapV2Migrator.sol",
+        "sha256": "e020b26f5d9c4162340fcbb42bf6ea5febfc3ee68f33aa25e527cd43e8de0483"
+      },
+      {
+        "path": "contracts/interfaces/IUniswapV2Router01.sol",
+        "sha256": "0439ffe0fd4a5e1f4e22d71ddbda76d63d61679947d158cba4ee0a1da60cf663"
+      },
+      {
+        "path": "contracts/interfaces/IUniswapV2Router02.sol",
+        "sha256": "a2900701961cb0b6152fc073856b972564f7c798797a4a044e83d2ab8f0e8d38"
+      },
+      {
+        "path": "contracts/interfaces/IWETH.sol",
+        "sha256": "60760053849b916b72386fef1126ab69c7482c2aa6b5fb836368eff42905cb30"
+      },
+      {
+        "path": "contracts/interfaces/V1/IUniswapV1Exchange.sol",
+        "sha256": "af0f040756cffdad159024068160e3d29974963eea113bf79debe6e0d9bfc5f4"
+      },
+      {
+        "path": "contracts/interfaces/V1/IUniswapV1Factory.sol",
+        "sha256": "757faaa23cac0f415640c16c009e92458271ece8876c0b739f2a3bbad6338aee"
+      },
+      {
+        "path": "contracts/libraries/SafeMath.sol",
+        "sha256": "39e5b4c0bc19b72fa59c2d2177ba5ed6cfadcd76f3f804563011e579367530fb"
+      },
+      {
+        "path": "contracts/libraries/UniswapV2Library.sol",
+        "sha256": "4f83e9334f833568fa47b36e9ceca435f6c2962760a0596b043c4e538d0fd9f2"
+      },
+      {
+        "path": "contracts/libraries/UniswapV2LiquidityMathLibrary.sol",
+        "sha256": "9bd00cdd3fb4874a72d6c13a287e50b3e29d403a246d1d46e40ce7669f04b34b"
+      },
+      {
+        "path": "contracts/libraries/UniswapV2OracleLibrary.sol",
+        "sha256": "508b544096f9d916bef314a517a1f3573243272f34d8c4fbacbc7f256523e74f"
+      },
+      {
+        "path": "contracts/test/DeflatingERC20.sol",
+        "sha256": "d9768f5ce9f19aeda89356a272b560ae5b9447df3200aceaa59dbb9ed8a1c8bc"
+      },
+      {
+        "path": "contracts/test/ERC20.sol",
+        "sha256": "16ace9cf263a8918972fe942217ec6854dc8251fb28420df16be7be53fb0fb88"
+      },
+      {
+        "path": "contracts/test/RouterEventEmitter.sol",
+        "sha256": "82aaec8037248d47c013c33a491df044a4e34eef87491b3b94c24a8fd135ddda"
+      },
+      {
+        "path": "contracts/test/WETH9.sol",
+        "sha256": "33f13565b207188485030aa20fd1f38d52d8c455cc64720560fb38149dcb4137"
+      }
+    ]
+  },
+  {
+    "name": "compound",
+    "repo": "compound-finance/compound-protocol",
+    "sha": "a3214f67b73310d547e00fc578e8355911c9d376",
+    "files": [
+      {
+        "path": "contracts/BaseJumpRateModelV2.sol",
+        "sha256": "9cd2fe5f7b88748c336bf2988c475da517ffd4909057b53df138b80f162fb34f"
+      },
+      {
+        "path": "contracts/CDaiDelegate.sol",
+        "sha256": "8ab2406659f3e1d6c8737327da193226acf8f3496c6fb97598b61563187b1cdd"
+      },
+      {
+        "path": "contracts/CErc20.sol",
+        "sha256": "edd2e9fb5c5fdfa264a557da3cc78b4eee071e80068978d3510e5127895a513a"
+      },
+      {
+        "path": "contracts/CErc20Delegate.sol",
+        "sha256": "309e4e40f07c6960c30f90d50fa6f46b7f97ee9f6baa9a57e370f7caa9d22924"
+      },
+      {
+        "path": "contracts/CErc20Delegator.sol",
+        "sha256": "9718180bf22b5dd0671ffed575496a062684089610395f67acf45d6149781686"
+      },
+      {
+        "path": "contracts/CErc20Immutable.sol",
+        "sha256": "14236665ad8baf5cc374504e6420d55f0e5527f8939a783f08197abdf12b039e"
+      },
+      {
+        "path": "contracts/CEther.sol",
+        "sha256": "e8eb334bc2832497a54c9a129e8f4d536257ad976b258eb2faa4baab956689a1"
+      },
+      {
+        "path": "contracts/CToken.sol",
+        "sha256": "b64790f41ef851b09856af286ce8253b95ef34fda4ae836f924a519e8f792785"
+      },
+      {
+        "path": "contracts/CTokenInterfaces.sol",
+        "sha256": "0246c7789d36fca84a7861ab39693f02dfb7bde904011f4efda654d4286fe93a"
+      },
+      {
+        "path": "contracts/Comptroller.sol",
+        "sha256": "89a4c77da4920d0d0e44d7591446fe15e6b0c8a4794646aa497f725dc72818d8"
+      },
+      {
+        "path": "contracts/ComptrollerG7.sol",
+        "sha256": "118729b018a69c1d941c40a3bcb4c79f25a9dbee7e5c7d2b2bdc32c96ca4adaa"
+      },
+      {
+        "path": "contracts/ComptrollerInterface.sol",
+        "sha256": "d7c526660047c315749808bd9fa1b43ea21a3ab4712016b58aea9dfe7924bc9c"
+      },
+      {
+        "path": "contracts/ComptrollerStorage.sol",
+        "sha256": "9c6ccfc755cefa63618b762aa72052954fcdfe9ac71f11c194ccb45720b14986"
+      },
+      {
+        "path": "contracts/DAIInterestRateModelV3.sol",
+        "sha256": "c93701209b3628778f1850d203de74aafeff89a53b3f85bdb39edf743e962a83"
+      },
+      {
+        "path": "contracts/EIP20Interface.sol",
+        "sha256": "a6417e2f1b068faed454627d277dea622483c66d7a863ea7866be80aa979aa70"
+      },
+      {
+        "path": "contracts/EIP20NonStandardInterface.sol",
+        "sha256": "426b23167d8399e5cd8c209147ba3f1492cea11fe4eb5b813b39b8204b3d2c56"
+      },
+      {
+        "path": "contracts/ErrorReporter.sol",
+        "sha256": "971552a1172910584ab0a1a225d2317ffb39fdc9fe019c87e6480dbaaf2e5a60"
+      },
+      {
+        "path": "contracts/ExponentialNoError.sol",
+        "sha256": "dd272760b2d9082db9c94f6198896402fe3681bf41fc3f9d8bba31ada290c3c5"
+      },
+      {
+        "path": "contracts/Governance/Comp.sol",
+        "sha256": "04fcf66211e24618c4ed6e23695c7c853e61a41e4150e2b47614781775827190"
+      },
+      {
+        "path": "contracts/Governance/GovernorAlpha.sol",
+        "sha256": "2f157386cfa322d3066544e10d9212e0906b901cc58abd39b5f35fae92b90432"
+      },
+      {
+        "path": "contracts/Governance/GovernorBravoDelegate.sol",
+        "sha256": "9905679d61ca6535f0faa286d320a8a11aa80a73efa056f021868d70cc27b9fd"
+      },
+      {
+        "path": "contracts/Governance/GovernorBravoDelegateG1.sol",
+        "sha256": "e017d02c85d267d9ad975cbbbd3ef5770c00e422053256d7a1d29452d9f4fa97"
+      },
+      {
+        "path": "contracts/Governance/GovernorBravoDelegateG2.sol",
+        "sha256": "97e229cca48cddc1aa608153ba6a6f1ccf17a79f2005d0a20be9479c2e11f52d"
+      },
+      {
+        "path": "contracts/Governance/GovernorBravoDelegator.sol",
+        "sha256": "4d2fe4f58f20e3ec5a1cc091bdbc2e45a82a975ba37521069eeb2a1d7af48c8b"
+      },
+      {
+        "path": "contracts/Governance/GovernorBravoInterfaces.sol",
+        "sha256": "7b2ecdfac9a71993a23723a4997b7ee4c80aaf77e592d6329a03485434880369"
+      },
+      {
+        "path": "contracts/InterestRateModel.sol",
+        "sha256": "1c8ef6b60a22a46eae3e5ffa67cad8cd24698fcc8f1ab60543aee07c98e9b1fc"
+      },
+      {
+        "path": "contracts/JumpRateModel.sol",
+        "sha256": "4e12d966d88532ae4f4c52121da1640819059f2ffbb20dcc208908c34d0c8395"
+      },
+      {
+        "path": "contracts/JumpRateModelV2.sol",
+        "sha256": "e1c7b55729020efdf90fcd5348cf4b609a6223727d94bc2da7f148dfab8fba43"
+      },
+      {
+        "path": "contracts/Lens/CompoundLens.sol",
+        "sha256": "3a2d5ba740c1d6e165d0b51c84b51443a91c18c0231b84684968a0c5ea9c1751"
+      },
+      {
+        "path": "contracts/Maximillion.sol",
+        "sha256": "a12d5f35661655a7e6a6b0a8c942f756fbfb50423a650bf288bcd02a4a39c195"
+      },
+      {
+        "path": "contracts/PriceOracle.sol",
+        "sha256": "b69196cdf423474ae56ed338358f329671224f10f4560342bb3e27ede605cf09"
+      },
+      {
+        "path": "contracts/Reservoir.sol",
+        "sha256": "99cb129e8fd9b8f11aedfd1e93f62d92a12fd9d90ef28cda67270d0804f009cc"
+      },
+      {
+        "path": "contracts/SafeMath.sol",
+        "sha256": "31e84dc585327cbed6026b8bd6980d0fff60b0fed7a57a89df74394034775b1d"
+      },
+      {
+        "path": "contracts/SimplePriceOracle.sol",
+        "sha256": "88685295a21032274918c89bf82ddfaf512b1a8736a3abc4f09c91b7b3719864"
+      },
+      {
+        "path": "contracts/Timelock.sol",
+        "sha256": "67ebcb4b154b9394d18315a5ffa49f30213749416a994682ea47d10b362255e2"
+      },
+      {
+        "path": "contracts/Unitroller.sol",
+        "sha256": "c2028e5d5ff895aaaea4edb69ac36d2c06ec7131b5e04fecfd646e61aa04097a"
+      },
+      {
+        "path": "contracts/WhitePaperInterestRateModel.sol",
+        "sha256": "1ba1d20cd0076928bc80f06ed80e9855d1b8c9c2546303af7011fe6a9a4aa9d3"
+      }
+    ]
+  },
+  {
+    "name": "openzeppelin",
+    "repo": "OpenZeppelin/openzeppelin-contracts",
+    "sha": "b04d141ba4fec9b0f970ce4c7746b0a02e50000b",
+    "files": [
+      {
+        "path": "contracts/access/AccessControl.sol",
+        "sha256": "74c193e45cf09c09745b2ed5261946563acd1702f30d42cae4f42b53f5d3797b"
+      },
+      {
+        "path": "contracts/access/IAccessControl.sol",
+        "sha256": "140304b7e99d517c57a13f391dfd3b550ca633a507f7b2af130f391b6cd89cc5"
+      },
+      {
+        "path": "contracts/access/Ownable.sol",
+        "sha256": "38578bd71c0a909840e67202db527cc6b4e6b437e0f39f0c909da32c1e30cb81"
+      },
+      {
+        "path": "contracts/access/Ownable2Step.sol",
+        "sha256": "c75345d7b9feef17ae29f2a800ca2f65f8021cf80436a41d6ec00f57f5180f36"
+      },
+      {
+        "path": "contracts/access/extensions/AccessControlDefaultAdminRules.sol",
+        "sha256": "4938cc7bb60647a14fcb40ea266ff70135b3af06eaac3f0360d1506d6cdb8114"
+      },
+      {
+        "path": "contracts/access/extensions/AccessControlEnumerable.sol",
+        "sha256": "25b45b146ee0b76e4afb33b5f1960b119eb81559ea343242f7145fdceab30ed0"
+      },
+      {
+        "path": "contracts/access/extensions/IAccessControlDefaultAdminRules.sol",
+        "sha256": "cfcb24ffcd5901a1f4293356f35ea01388f8b82f994a7a0f2a7187d651095c99"
+      },
+      {
+        "path": "contracts/access/extensions/IAccessControlEnumerable.sol",
+        "sha256": "e0f69ae5acc588f27b8eba7f5a625f01409be5bb4a08e825774ccee32efc0ff9"
+      },
+      {
+        "path": "contracts/access/manager/AccessManaged.sol",
+        "sha256": "94cd90384064e1bc0dfd4e7dc0e9f231d735f3fc58c27b2ff20c806c369edaa2"
+      },
+      {
+        "path": "contracts/access/manager/AccessManager.sol",
+        "sha256": "43791b8f9f9aa007c137b44c9ac957d7c485c175cee6dfb16ea7df40b4080641"
+      },
+      {
+        "path": "contracts/access/manager/AuthorityUtils.sol",
+        "sha256": "d6d1da9c9278375b89aa4bae804f0ac36778badb8451b5fe77029a2d861135f6"
+      },
+      {
+        "path": "contracts/access/manager/IAccessManaged.sol",
+        "sha256": "2ef4db4c7c678372fe79af348ce3d60d4cf7136d195daf7a9bc2e434ffcbaacd"
+      },
+      {
+        "path": "contracts/access/manager/IAccessManager.sol",
+        "sha256": "93977b25ae49a6d1e35c5b23d0ec487ef9de4a8b6aebe0dca57d9a5ef709751e"
+      },
+      {
+        "path": "contracts/access/manager/IAuthority.sol",
+        "sha256": "68428ead009a99c5270e2a0a93e4d2756b6f332ee14027963cc7bb06cd67a29a"
+      },
+      {
+        "path": "contracts/proxy/Clones.sol",
+        "sha256": "320307fc28fefc6335fca19b3f9982fc03c2f1e0e13610e24b3183aeb20ae1ac"
+      },
+      {
+        "path": "contracts/proxy/ERC1967/ERC1967Clones.sol",
+        "sha256": "c9b9a8f93bf8f62f9a00ee2a67f9dacf34eb42279830e9d12d1f324cd905dd65"
+      },
+      {
+        "path": "contracts/proxy/ERC1967/ERC1967Proxy.sol",
+        "sha256": "41a3040398d53999dea3251ff8906e11ec1a699362a1d8f4a55bfc7709cc00f3"
+      },
+      {
+        "path": "contracts/proxy/ERC1967/ERC1967Utils.sol",
+        "sha256": "4cc2cdede1fa3c6ec7b96d3cc096e5a84b3c0dffb6da84b60fdf39c0ed75b8e8"
+      },
+      {
+        "path": "contracts/proxy/Proxy.sol",
+        "sha256": "fa8aae37b2939371fcbce48b814c0d5c7e57e3e267f348459f29941937746c98"
+      },
+      {
+        "path": "contracts/proxy/beacon/BeaconProxy.sol",
+        "sha256": "28215d3fe4038556fd4878a6dd823663338c3eb641430259a20205da25255909"
+      },
+      {
+        "path": "contracts/proxy/beacon/IBeacon.sol",
+        "sha256": "c1c9726bbb0ec4c540c7c98059dcded69a8586b46c168036672381033ee76239"
+      },
+      {
+        "path": "contracts/proxy/beacon/UpgradeableBeacon.sol",
+        "sha256": "b2defc5e0835068295138f1b42263acb0b22ed08fd90c9f7f48799bb336dc47d"
+      },
+      {
+        "path": "contracts/proxy/transparent/ProxyAdmin.sol",
+        "sha256": "bfb4c69f719b1159a5238cb342bde44887504bcf983dd9a120f1f8fae178cfbd"
+      },
+      {
+        "path": "contracts/proxy/transparent/TransparentUpgradeableProxy.sol",
+        "sha256": "4ecf6fc8b55e13afeb0f97b7f815b6f225eca50e838b7dfbfa73f752701f14a7"
+      },
+      {
+        "path": "contracts/proxy/utils/Initializable.sol",
+        "sha256": "f527a063813c2bf60c153fb08e38539578935402894fcc36fac42324ca325d3b"
+      },
+      {
+        "path": "contracts/proxy/utils/UUPSUpgradeable.sol",
+        "sha256": "b5af3bfd79a32c6da2d09b0be38d9b63dcd0d159a1a4a0198431fd00acc1fd52"
+      },
+      {
+        "path": "contracts/token/ERC20/ERC20.sol",
+        "sha256": "acb04d2fd908e2e4d76d5a964fdb46aded638a927c0b05c29d690fd435650e2e"
+      },
+      {
+        "path": "contracts/token/ERC20/IERC20.sol",
+        "sha256": "01b6f5c4fa45fd38822b286ecef6daf983d27306dd6362496fa71b3e4600b72c"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/ERC1363.sol",
+        "sha256": "256c557726898d7174f6d6be6255feda980e252161042479d35a42337b2e1a37"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/ERC20Burnable.sol",
+        "sha256": "73a072fe19957844b14b87a3ef77283d78a424a6690f03f32928f94e4b042b41"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/ERC20Capped.sol",
+        "sha256": "2403fec28c40f964320bfb4a025b12392ce240c732f648f9080e3521418ffea1"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/ERC20Crosschain.sol",
+        "sha256": "ac5760c6d11aeea18a47f03aa3cbe03ab7c4f97b53949cce09c76a135773d358"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/ERC20FlashMint.sol",
+        "sha256": "25e463801944eff29ab0ddb9f3f05d3bf4b659fd06905fe7501e01800b0b7106"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/ERC20Pausable.sol",
+        "sha256": "80615790b9c9e5a0ad82997e86ca0c515cb21721f27096d171126227f24533be"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/ERC20Permit.sol",
+        "sha256": "21e6686affe35d7649c6de9ba64c1f6774d4c69eae5b7795a96618f47bc31d58"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/ERC20TransferAuthorization.sol",
+        "sha256": "703f86bb63f6b7189aab562308417c5f69baf5a070254aaccc78c050744c0670"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/ERC20Votes.sol",
+        "sha256": "b08316e14df59bbb16c40f453a0398f237fa0f160f52f0b03dc53cd1aced9857"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/ERC20Wrapper.sol",
+        "sha256": "38912f2786f0f013e2af77a1a32d7afdb02b2410c3ba45df3260f1e34fbb6015"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/ERC4626.sol",
+        "sha256": "4f70f48f224fa45be2e0e1268cf9ed24cd40d18588de61c193492fdea17f8c27"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/IERC20Metadata.sol",
+        "sha256": "0b7132f17d14d1d84b41b0bb429be62dafdff00fd3470f68724d8018eb07f57a"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/IERC20Permit.sol",
+        "sha256": "c302edfbf7f396e1130be81278c5c994543868f0f5bf0c0fb3f557e166d8d3f2"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/draft-ERC20Bridgeable.sol",
+        "sha256": "529326ba918d9e2c9658fc326446121b8128402ad91d2ee1e2aaba6b536476ca"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/draft-ERC20TemporaryApproval.sol",
+        "sha256": "d8d8f1c78f1fcc8e08fb2fc847da88a39c42b69d0f1d65d7e38599b986d45fa8"
+      },
+      {
+        "path": "contracts/token/ERC20/extensions/draft-ERC3009.sol",
+        "sha256": "5098bf0082e01e42744a12a0d9ffdac1c98ae6dc012ee8484a4bdbf23fbe398c"
+      },
+      {
+        "path": "contracts/token/ERC20/utils/ERC1363Utils.sol",
+        "sha256": "17ed0dad7ec114eab7f188a8e5a410b37a43f556eb3893191f63da826052f860"
+      },
+      {
+        "path": "contracts/token/ERC20/utils/SafeERC20.sol",
+        "sha256": "5efe51a154b5be6f7e00ffcfaed6fb6f2b17a7a29f99e157e045f723cccead40"
+      }
+    ]
+  },
+  {
+    "name": "solmate",
+    "repo": "transmissions11/solmate",
+    "sha": "89365b880c4f3c786bdd453d4b8e8fe410344a69",
+    "files": [
+      {
+        "path": "src/auth/Auth.sol",
+        "sha256": "8689fc68a85e5942f8b814efc14cee691fff188594bd7dcefc969ccc65bd115a"
+      },
+      {
+        "path": "src/auth/Owned.sol",
+        "sha256": "15d0a73cb7778e668c32bee766ca5870c0019d4d5c7ba48cf3f470135dc9a50c"
+      },
+      {
+        "path": "src/auth/authorities/MultiRolesAuthority.sol",
+        "sha256": "5ab0b9540f4bafa542ecf11251ba988e07896b4e572d2c82f5f56edd82e743ef"
+      },
+      {
+        "path": "src/auth/authorities/RolesAuthority.sol",
+        "sha256": "51040c1f37851e8fdf1bc900f50231783bd485b00a9658420c55e75b0f0cfd9b"
+      },
+      {
+        "path": "src/test/Auth.t.sol",
+        "sha256": "8a6cb86d6ed5f0a6162ad68186eaf9a39fa62dc1fa6cd00c801592adc335a1e8"
+      },
+      {
+        "path": "src/test/Bytes32AddressLib.t.sol",
+        "sha256": "99ba68b10e2d48ea71953c4cc6ba9c1dd5357a4fad012882e0320593fd5a8653"
+      },
+      {
+        "path": "src/test/CREATE3.t.sol",
+        "sha256": "4fbd7892e6d0918841a929089f6d35ee58cbd455d0a3a5b5eb9257daaa8e5a79"
+      },
+      {
+        "path": "src/test/DSTestPlus.t.sol",
+        "sha256": "d954e3a9d66ddb353ac823e14c80250c026d061837cd395007a31356a58dbf74"
+      },
+      {
+        "path": "src/test/ERC1155.t.sol",
+        "sha256": "9d990b7a9215ebb8455d43045c37879b51ece5e6407a4282bf8f6c1491ef76ed"
+      },
+      {
+        "path": "src/test/ERC20.t.sol",
+        "sha256": "e1e334dd267ecca607a7a31c942f848af30b6687964a1f705000d4249e70445d"
+      },
+      {
+        "path": "src/test/ERC4626.t.sol",
+        "sha256": "e2e2940d3ed80a8a887a4d81e3a3300d0983840da5642e84855ef52c9a375ae9"
+      },
+      {
+        "path": "src/test/ERC6909.t.sol",
+        "sha256": "164784296d2dc06685d21463fe8529620fc45372bc87d8df78ca5a8933edd253"
+      },
+      {
+        "path": "src/test/ERC721.t.sol",
+        "sha256": "9cabaf8d62688ed3256329945941507f3bbc05bc9291d395a703c751e718a78a"
+      },
+      {
+        "path": "src/test/FixedPointMathLib.t.sol",
+        "sha256": "7cb6a29db79bc8e3641098ac447dab0779b21272e9c23e371a92c6d7bed450cc"
+      },
+      {
+        "path": "src/test/LibString.t.sol",
+        "sha256": "98e17fb084cddf16d5efb705f3d9ddbab3d9de423d04277544a5f125a396cf3a"
+      },
+      {
+        "path": "src/test/MerkleProofLib.t.sol",
+        "sha256": "d83d1c9175a077d8903b6854f0525965ad8ddf86e8abbb18b8289c05a6f7bbb3"
+      },
+      {
+        "path": "src/test/MultiRolesAuthority.t.sol",
+        "sha256": "0626cc25cdd51a365f70647dc704007f8244a8c40d76487aa9dd8d2aeb967558"
+      },
+      {
+        "path": "src/test/Owned.t.sol",
+        "sha256": "88af51e2a46fe8bb0d94d5e409bf062aacbf799065a1fb62192ffa8e7348efe4"
+      },
+      {
+        "path": "src/test/ReentrancyGuard.t.sol",
+        "sha256": "ad674aab2fa146d842739c8f6eb1dedb9b609ac70c118aa2b600a6acc4b4d133"
+      },
+      {
+        "path": "src/test/RolesAuthority.t.sol",
+        "sha256": "ccbb51d0225f9ccf7259712bb0b3550c0cf67482f559af511a29ba75bf479d21"
+      },
+      {
+        "path": "src/test/SSTORE2.t.sol",
+        "sha256": "fa23d9f8863292ced8583d9077e1e3543f10e345687872d88d56c192123bda59"
+      },
+      {
+        "path": "src/test/SafeCastLib.t.sol",
+        "sha256": "b54dd90c829c9e9d7cf2ccc316a552a2698ce20faa9040658af41f7a6d993ebd"
+      },
+      {
+        "path": "src/test/SafeTransferLib.t.sol",
+        "sha256": "19526b98229047b41c271813e4a3ba4c3f43f96665ee6bbe004a1b638b752077"
+      },
+      {
+        "path": "src/test/SignedWadMath.t.sol",
+        "sha256": "edb25e1643fe75f88f8494543713b2c212fce3a241735805543fe26ceeb30ebc"
+      },
+      {
+        "path": "src/test/WETH.t.sol",
+        "sha256": "110f1b889bb18d9cb7e7d15645c1a1fbbd528ed1d9acb880a176271bae2284f5"
+      },
+      {
+        "path": "src/test/utils/DSInvariantTest.sol",
+        "sha256": "7b9a1b1482143b1f5a4516946a83f2067f8abcec20c56397947708834c231401"
+      },
+      {
+        "path": "src/test/utils/DSTestPlus.sol",
+        "sha256": "7da8f26070bfdad701f87e58a6da018f2da2a1ec91101c8bc352bc4792c3626c"
+      },
+      {
+        "path": "src/test/utils/Hevm.sol",
+        "sha256": "718d506242acaeb4d53596746843a73e2a80b77b9e815344f5d3d4b77bd2fdd2"
+      },
+      {
+        "path": "src/test/utils/mocks/MockAuthChild.sol",
+        "sha256": "8de6490b0ccdf0b7dc5331e2f5c9b614239fc017718b95cda16d1a5244afc150"
+      },
+      {
+        "path": "src/test/utils/mocks/MockAuthority.sol",
+        "sha256": "bc44e2a9791bc72c29ffc755acaa0485407ee6ce4fd90981ade7a9e030a3f4a3"
+      },
+      {
+        "path": "src/test/utils/mocks/MockERC1155.sol",
+        "sha256": "9f225c341b0a5d2892ced7eb8828ad9fa0db55fcdfde2786c7eceafbb1b14d1a"
+      },
+      {
+        "path": "src/test/utils/mocks/MockERC20.sol",
+        "sha256": "9af27b7d7230e4eb62406011643a8844405493f2f6d2c10daff87a9276f65eab"
+      },
+      {
+        "path": "src/test/utils/mocks/MockERC4626.sol",
+        "sha256": "f4599c2b29767b30f082ca78d426868e9d8751079fa06f51141094193ecbedf6"
+      },
+      {
+        "path": "src/test/utils/mocks/MockERC6909.sol",
+        "sha256": "03ae95e4109daf572f3c2b7d51a0be01acf2645145961e93df326010f5d7d530"
+      },
+      {
+        "path": "src/test/utils/mocks/MockERC721.sol",
+        "sha256": "48cae0bd8ce96adb2b3eb15412ed9376834ee46d3e24ccdda595d1ad725da9f0"
+      },
+      {
+        "path": "src/test/utils/mocks/MockOwned.sol",
+        "sha256": "4b614480bb62b935db478ff3518586f3ab75e9dcf25d0e44fd51ee2ba580f1f1"
+      },
+      {
+        "path": "src/test/utils/weird-tokens/MissingReturnToken.sol",
+        "sha256": "a8f1514576e71662ff62c7fb2f1cf9e5659b2fe13a7b4e67741541d3b80bf54a"
+      },
+      {
+        "path": "src/test/utils/weird-tokens/ReturnsFalseToken.sol",
+        "sha256": "c90a163998d1f13c20c4b6a5d3c380139591feddf9cd9eafc28164431126c04b"
+      },
+      {
+        "path": "src/test/utils/weird-tokens/ReturnsGarbageToken.sol",
+        "sha256": "42db7fbf77287f6e817178c2dc23585864ffd3a1fe9bdf1561e7baba5c9b7599"
+      },
+      {
+        "path": "src/test/utils/weird-tokens/ReturnsTooLittleToken.sol",
+        "sha256": "a51fc4a916cc528467884adfbaf32aca0963b0c17b07a0f5d0500103cb0c4546"
+      },
+      {
+        "path": "src/test/utils/weird-tokens/ReturnsTooMuchToken.sol",
+        "sha256": "7e527a1eb8c1b83d7169b4e3de7d6880556052d5061bca06131c8835d505044d"
+      },
+      {
+        "path": "src/test/utils/weird-tokens/ReturnsTwoToken.sol",
+        "sha256": "6ec22dad83dc829b0eb4bc789e4ea77689a5982098f1988572e3128836881624"
+      },
+      {
+        "path": "src/test/utils/weird-tokens/RevertingToken.sol",
+        "sha256": "7d188c8444fde6d0ecfed8d3b208495da084a42c62d8d2369e913d7c2b6523cf"
+      },
+      {
+        "path": "src/tokens/ERC1155.sol",
+        "sha256": "3dbbc6faef59c3ee32b1c202510fab2ac6084faf19c164e0d85a392be1fd52ae"
+      },
+      {
+        "path": "src/tokens/ERC20.sol",
+        "sha256": "a3a7e839f42762ef24623581542a916e838f3c7c0bef647963d1fdad0f9d208a"
+      },
+      {
+        "path": "src/tokens/ERC4626.sol",
+        "sha256": "f7febaa5999e4b4255e5c4fb3f898428fe74a7b153110064f44d973e85479276"
+      },
+      {
+        "path": "src/tokens/ERC6909.sol",
+        "sha256": "efe0bdc5ef262bb17ed8b72d455bd46449cb5bdeb05b1e681c4da93cf7f48d58"
+      },
+      {
+        "path": "src/tokens/ERC721.sol",
+        "sha256": "2da0cca384448208e25d43eeb5953a237de0e6712942a07d0f2674e895b0d3d3"
+      },
+      {
+        "path": "src/tokens/WETH.sol",
+        "sha256": "22277963408ee27ddbc769fa27b5a09031b0f699e6b24d36f55435c6a2039ac1"
+      },
+      {
+        "path": "src/utils/Bytes32AddressLib.sol",
+        "sha256": "a98260423087aa794384b5afa952c0b4beed4be080e355ac8995224d852e2851"
+      },
+      {
+        "path": "src/utils/CREATE3.sol",
+        "sha256": "0eff8e4b9ef607a8d82422fe9796517782e2b1b98ff9ad4386e899e0af363685"
+      },
+      {
+        "path": "src/utils/FixedPointMathLib.sol",
+        "sha256": "edfd7fa8ec4087d252f637df16669599d5c0ac803ab465730f8cc3a5e8a8d55a"
+      },
+      {
+        "path": "src/utils/LibString.sol",
+        "sha256": "8fabed55720de277dfd74fd6f11a78cb97f59bf571d53b0ae987734a0e5e5209"
+      },
+      {
+        "path": "src/utils/MerkleProofLib.sol",
+        "sha256": "59581539c278fd2a3e8e69e9a3994bc5f487ee35d6ebf2f09b9a0040cdd103b5"
+      },
+      {
+        "path": "src/utils/ReentrancyGuard.sol",
+        "sha256": "e69ce8729cd5ff2caac16efa4498e967fc6bf85bbad4003be87c8a0757fd8a0c"
+      },
+      {
+        "path": "src/utils/SSTORE2.sol",
+        "sha256": "2819718fe1f9557c54562f9012b958de6851c37d1f0f66a97888d851a4bef74f"
+      },
+      {
+        "path": "src/utils/SafeCastLib.sol",
+        "sha256": "818c6ab372ca3b5881054c8cc9a3aae3dbf6cabd8b565bdbea3ff0cc4c21eb98"
+      },
+      {
+        "path": "src/utils/SafeTransferLib.sol",
+        "sha256": "aeda1e7c2966b2c435afffaa76001ec3e7bc3abf6c585ebe24ccf2930aa452d2"
+      },
+      {
+        "path": "src/utils/SignedWadMath.sol",
+        "sha256": "f606afc7c279737a02ebbaaec3025f16b971db0afef6bef4e21bb1ae5dfc74f6"
+      }
+    ]
+  }
+]

@@ -96,7 +96,10 @@ def reference_extract(source: str) -> list[dict]:
 
 def collect(corpus: str) -> list[tuple[str, str]]:
     seen, files = set(), []
-    for dirpath, _, filenames in os.walk(os.path.join(corpus, "uploads")):
+    # `uploads/<id>` layout (app data) or a plain directory (fetched corpus)
+    base = os.path.join(corpus, "uploads")
+    root = base if os.path.isdir(base) else corpus
+    for dirpath, _, filenames in os.walk(root):
         for fn in sorted(filenames):
             if not fn.endswith(".sol"):
                 continue

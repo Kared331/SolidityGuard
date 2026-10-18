@@ -10,6 +10,14 @@ SolidGuard 项目更新说明。
 
 > 待规划变更。
 
+### 2026-10-18 · 审计完整性 P5（D1 决策）
+
+- **语料**：5 个仓库 / 176 文件 / 1759 函数，commit 锁定（`docs/evidence/corpus.lock.json`）；提取回归 `1759 = 1759`（漏/噪 0）。
+- **实测**：关键词过滤丢弃率 **20.9%**（periphery 4.2% → openzeppelin 26.8%）。
+- **决策**：保留过滤，但把过滤项作为 `filtered / keyword_filter` 写进账本；恒等式扩为四项，新增 `audit_runs.functions_filtered`（迁移 014），报告新增 "Filtered (keyword)" 行。
+- **理由**：若只保留过滤，分母会从 1759 缩到 1391，报告会显示"100% 覆盖"——正是 P1 消灭过的静默丢失。
+- **测试**：158 单测（+2）。
+
 ### 2026-10-18 · 审计完整性 P4（知识库）
 
 - **SWC 离线快照**：37 条随代码入库（`services/engine/data/swc_registry.json`），默认同步不再联网；`?refresh=true` 才访问已归档的上游仓库，且结果必须通过条数/字段校验。

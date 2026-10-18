@@ -13,7 +13,7 @@
 
 总蓝图分 7 个阶段。前 6 个阶段的唯一目的，是让第 7 阶段（研究命题）**具备被测量和被证伪的资格**；不是为了让系统"更完备"。
 
-**现在处在 P4 结束**：提取（P0）、账本（P1）、主链路验证（P2）、Fuzzer（P3，范围收窄）、知识库（P4）均已完成，证据见 `docs/evidence/`。下一步 P5（D1 决策）；P6 需要真实 LLM key。
+**现在处在 P5 结束**：提取（P0）、账本（P1）、主链路验证（P2）、Fuzzer（P3，范围收窄）、知识库（P4）、D1 决策（P5）均已完成，证据见 `docs/evidence/`。**只剩 P6（研究命题），需要真实 LLM key。**
 
 ---
 
@@ -24,7 +24,7 @@
 | # | 问题 | 证据 | 状态 | 阶段 |
 |---|---|---|---|---|
 | **R1** | 无可证伪主张、无基准、无真实 LLM 运行 | 全文 | 未修 | P6 |
-| **D1** | 关键词过滤丢弃 21.7% 函数 | [evidence §3](../../evidence/extraction-baseline.md) | 推迟 | P5 |
+| **D1** | 关键词过滤丢弃 21.7% 函数（P5 实测 20.9%） | [evidence/p5-corpus](../../evidence/p5-corpus.md) | **已修（P5）：保留过滤，但过滤项入账本** | P5 |
 | **D2** | interface 声明吞 `{`，22 个幻影单元 | 同上 §4 | 已修 | P0 |
 | **D3** | ctor/receive/fallback 15 个从未提取 | 同上 §4 | 已修 | P0 |
 | **D4** | 注释里的 `function` 被当真函数 | 同上 §4 | 已修 | P0 |
@@ -102,7 +102,9 @@ P0 提取正确性 ✅
 
 ```
 F:  files_total        = files_processed + files_unreadable
-U:  functions_extracted = audited + skipped + failed        （仅统计 processed 文件）
+U:  functions_extracted = audited + skipped + failed + filtered   （仅统计 processed 文件）
+
+> `filtered` 是 P5 加入的：关键词过滤掉的函数也要入账，否则分母会从 1759 缩到 1391，报告显示"100% 覆盖"。
 ```
 
 只保留 U 会被"读不到文件 → 计 0 个函数"平凡满足。F 就是防这一手的。两条都要在测试里断言。
@@ -263,7 +265,7 @@ U:  functions_extracted = audited + skipped + failed        （仅统计 process
 
 ---
 
-### P5 — D1 决策（0.5 天）
+### P5 — D1 决策（0.5 天，✅ 已完成 2026-10-18）
 
 **目标**：用数据决定要不要删关键词过滤，而不是凭感觉。
 
@@ -274,6 +276,15 @@ U:  functions_extracted = audited + skipped + failed        （仅统计 process
 | 3 | 二选一：<br>• 丢弃率 < 10% → **删掉过滤**，代价可接受；<br>• 丢弃率 ≥ 10% 且预算敏感 → 保留过滤，但在报告里写明"本次仅审计 X% 的函数" |
 
 **出口**：无论选哪边，都必须有数字支撑，并且写进 README。
+
+**实测结果**（证据：[`evidence/p5-corpus.md`](../../evidence/p5-corpus.md)）：
+
+- 语料：5 个仓库 / 176 文件 / 1759 函数，commit 锁定；提取回归 `1759 = 1759`（漏/噪 0）。
+- 过滤丢弃率 **20.9%**（periphery 4.2% → openzeppelin 26.8%）；按原判据落在"保留"一侧。
+- **但原二选一都错**：保留会让 368 个函数从账本里消失，报告会显示"提取 1391"而源码有 1759——正是 P1 消灭过的谎言。
+- 实际执行第三条路：**保留过滤，把过滤项作为 `filtered / keyword_filter` 入账**；恒等式扩为四项，新增 `audit_runs.functions_filtered`（迁移 014），报告新增 "Filtered (keyword)" 行。
+- 真实链路验证（项目 #62）：`3 = 0 + 2 + 0 + 1`，`helper` 在账本中显示为 filtered，报告可见。
+- 未能回答：被过滤的函数里有多少真含漏洞——需要标注，属于 P6。
 
 ---
 
